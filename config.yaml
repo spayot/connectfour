@@ -1,0 +1,36 @@
+name: test
+
+# define board size and number of spots to align to win
+game:
+    board:
+        width: 7
+        height: 6
+    n_to_win: 4
+
+# policy-value network
+pvn:
+    block_size: 1
+    l2_const: 1e-4
+
+# training parameters
+training:
+    dummy: 0 # tbd
+
+# monte carlo tree search parameters
+mcts:
+    C_PUCT: 4 # controls 
+    sims: 100 # number of simulations to run to generate improved policy
+    tau: 1    # temperature 
+
+selfplay:
+    tau_start: 1  # temperature for first few moves
+    tau_end: .1   # temperature after few moves 
+    threshold: 10 # number of moves before switching from tau_start to tau_end
+    
+paths:
+    log: 'logs/'  # log self-played games
+    models: 'models/' # save models trained on self-plays from previous generations
+    
+    
+
+
