@@ -4,80 +4,16 @@
 Abstract Game classes: https://github.com/int8/monte-carlo-tree-search
 """
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from scipy.ndimage import convolve
 
 from .config import ConnectFourGameConfig
 
-class AbstractGameAction(ABC):
-    pass
-
-class TwoPlayersAbstractGameState(ABC):
-
-    @abstractmethod
-    def game_result(self) -> Union[int, None]:
-        """
-        this property should return:
-
-         1 if player #1 wins
-        -1 if player #2 wins
-         0 if there is a draw
-         None if result is unknown
-
-        Returns
-        -------
-        int
-
-        """
-        pass
-
-    @abstractmethod
-    def is_game_over(self) -> bool:
-        """
-        boolean indicating if the game is over,
-        simplest implementation may just be
-        `return self.game_result() is not None`
-
-        Returns
-        -------
-        boolean
-
-        """
-        pass
-
-    @abstractmethod
-    def move(self, action: AbstractGameAction):
-        """
-        consumes action and returns resulting TwoPlayersAbstractGameState
-
-        Parameters
-        ----------
-        action: AbstractGameAction
-
-        Returns
-        -------
-        TwoPlayersAbstractGameState
-
-        """
-        pass
-
-    @abstractmethod
-    def get_legal_actions(self) -> list[AbstractGameAction]:
-        """
-        returns list of legal action at current game state
-        Returns
-        -------
-        list of AbstractGameAction
-
-        """
-        pass
 
 class Player(Enum):
     x = 1
@@ -90,14 +26,14 @@ class Player(Enum):
             return Player.x
 
     
-class ConnectFourAction(AbstractGameAction):
+class ConnectFourAction: 
     def __init__(self, x_coordinate: int, player: Player):
         """Actions in ConnectFour are defined by who is the player and
         which column do they insert their disc `x_coordinate`."""
         self.x_coordinate = x_coordinate
         self.player = player
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "x:{0} p:{1}".format(
             self.x_coordinate,
             self.player.value
@@ -145,7 +81,7 @@ class ConnectFourBoard:
         return ConnectFourBoard.from_array(copied_array)
     
     def board_to_str(self) -> str:
-        """"""
+        """controls the way a board should be represented as a string."""
         s = " " + str(self.array)
         o = str(Player.o.value)
         x = str(Player.x.value)
@@ -166,7 +102,7 @@ class ConnectFourBoard:
         
     
     
-class ConnectFourGameState(TwoPlayersAbstractGameState):
+class ConnectFourGameState: 
     def __init__(self, board: ConnectFourBoard, 
                  next_player: Player = Player.x,
                  game_config: ConnectFourGameConfig = ConnectFourGameConfig()):

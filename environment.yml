@@ -1,1 +1,18 @@
-
+name: connectfour
+channels:
+  - apple
+  - conda-forge
+dependencies:
+  - python=3.9.7
+  - tensorflow-deps
+  - bumpy
+  - pandas
+  - jupyterlab
+  - matplotlib
+  - seaborn
+  - pytest
+  - pytest-cov
+  - pip
+  - pip:
+    - tensorflow-macos
+    - tensorflow-metal
