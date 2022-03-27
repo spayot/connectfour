@@ -20,7 +20,10 @@ training:
 mcts:
     C_PUCT: 4 # controls 
     sims: 100 # number of simulations to run to generate improved policy
-    tau: 1    # temperature 
+    tau: 1    # temperature
+    
+player:
+    evaluator: 'models/gen9.h5'
 
 selfplay:
     tau_start: 1  # temperature for first few moves

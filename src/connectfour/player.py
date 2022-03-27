@@ -147,7 +147,8 @@ class AzPlayer(object):
         return chosen_action, Pi
         
     
-    def self_play(self, tau: TemperatureSchedule=TemperatureSchedule(**selfplay_config), n_sims: int=mcts_config["sims"]) -> None:
+    def self_play(self, tau: TemperatureSchedule = TemperatureSchedule(**selfplay_config), 
+                  n_sims: int = mcts_config["sims"]) -> None:
         """player plays against itself and saves its improved policies and game outcome into a GameHistory object"""
         # initialize game
         game_history = GameHistory()

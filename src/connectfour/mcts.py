@@ -56,10 +56,10 @@ class MctsNode(object):
         total_node_visits = np.sum([action.N for action in self.actions]) + 1
         
         # multiplying Q by next to move, so that action is chosen based to maximize the reward from the player's perspective
-        next_to_move = self.state.next_to_move
+        next_to_move = self.state.next_player
         
         
-        ucbs = [next_to_move * action.Q + self.get_ucb(action, total_node_visits) for action in self.actions]
+        ucbs = [next_to_move.value * action.Q + self.get_ucb(action, total_node_visits) for action in self.actions]
         
         try:
             idx = np.argmax(ucbs)

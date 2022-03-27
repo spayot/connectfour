@@ -8,49 +8,11 @@ class TestPlayer:
     def test_get_next(self):
         player = game.Player.x
         assert player.get_next() == game.Player.o
-
-class TestConnectFourBoard:
-    def test_default_init(self):
-        board = game.ConnectFourBoard()
-        assert board.shape == (6,7), "default initialization should lead to shape (6,7)"
-
-    def test_custom_init_shape(self):
-        shape = (12,15)
-        board = game.ConnectFourBoard(shape)
-        assert board.shape == (12,15), "board shape is not updating as expected"
-    
-    def test_from_array_constructor_happy_path(self):
-        array = np.array([[0,1,0,0],[0,-1,0,1],[1,-1,1,-1]])
-        board = game.ConnectFourBoard.from_array(array)
-        assert board.shape == array.shape, "from_array creates boards with incorrect shape"
-
-    def test_from_array_constructor_invalid_Values(self):
-        with pytest.raises(AssertionError):
-            array = np.array([[0,1,0,0],[0,-1,0,1],[1,-1,1,-2]])
-            board = game.ConnectFourBoard.from_array(array)
-            
-    def test_board_updates(self):
-        array = np.array([[0,1,0,0],[0,-1,0,1],[1,-1,1,-1]])
-        board = game.ConnectFourBoard.from_array(array)
-        board[0,0] = 1
-        assert board.array[0,0] == 1
-        
-    def test_copy(self):
-        """verifies that changing the copy of a board does not impact
-        the original board"""
-        board = game.ConnectFourBoard()
-        board2 = board.copy()
-        board2[1,1] == 1
-        assert board[1,1] == 0
-        
-    def test_repr(self):
-        board = game.ConnectFourBoard.from_array(np.array([[0,0,1],[1,-1,-1]]))
-        assert str(board) == 'ConnectFourBoard\n  .  .  X\n  X  O  O'
         
         
 def generate_test_state(played_positions: list[int]) -> game.ConnectFourGameState:
     """allows to generate a state, based on a succession of moves."""
-    board = game.ConnectFourBoard()
+    board = np.zeros(shape=(6,7), dtype=int)
     state = game.ConnectFourGameState(board, next_player=game.Player.x)
     for position in played_positions:
         action = game.ConnectFourAction(position, state.next_player)
@@ -59,9 +21,13 @@ def generate_test_state(played_positions: list[int]) -> game.ConnectFourGameStat
 
 
 class TestConnectFourGame:
+    def test_default_initialization(self):
+        state = game.ConnectFourGameState()
+        assert (state.board == np.zeros(state.game_config.shape)).all()
+        
     def test_repr(self):
         state = generate_test_state([1,2])
-        assert str(state) == """ConnectFourGameState(board:\n\tConnectFourBoard\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  X  O  .  .  .  .\n\tnext_player=x"""
+        assert str(state) == """ConnectFourGameState(board:\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  .  .  .  .  .  .\n  .  X  O  .  .  .  .\n\tnext_player=x"""
         
     def test_horizontal_win(self):
         state = generate_test_state([1,2,1,2,1,5,1])

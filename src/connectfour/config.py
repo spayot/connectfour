@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import yaml
 
 # board config
 board_config = {'width': 7,
@@ -28,3 +29,11 @@ class ConnectFourGameConfig:
     shape: tuple[int,int] = (6, 7)
     n_to_win: int = 4
 
+
+def load_from_yaml(fpath=str) -> dict:
+    """loads game config from a yaml file"""
+    with open(fpath, 'r') as f:
+        config = yaml.safe_load(f)
+        
+    return config
+    

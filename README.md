@@ -3,14 +3,17 @@
 
 - AlphaGo Paper: https://arxiv.org/abs/1712.01815
 
-**GOAL**: train an agent to play Connect 4 using a strategy similar to AlphaGo Zero  
-**STRATEGY**: an agent can be created using brute-force mimimax strategy (exhaustive tree search + feature engineering). However, assuming more limited resources, we can adopt a truncated tree search strategy leveraging:
-- on one hand, an evaluator assigning for a given game state the probabilities to each possible next move to be the best action as well as the probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture with 2 heads: a policy head with a softmax actgivation and a state value head with a sigmoid activation.
+**GOAL**: train an agent to play Connect 4 using a strategy similar to AlphaGo Zero.
+**STRATEGY**: instead of creating a brute-force mimimax strategy (exhaustive tree search + feature engineering), we adopt a less resource-intensive approach: truncated tree search. This strategy consists in:
+- an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (ResNet) with 2 heads: a policy head with a softmax actgivation and a state value head with a sigmoid activation.
 - a version of Monte-Carlo Tree Search that leverages this evaluator to prioritize the regions of the tree to explore further, and returns an improved policy compared to the original evaluator.  
 The evaluator is iteratively trained following batches of self-played games. Training data is gathered by using:
 - the improved policy output from MCTS for the policy head and
-- the final outcome of the game (-1,0,1) for the value head.
-
+- the final outcome of the game (-1,0,1) for the value head.  
+```mermaid
+flowchart:
+A --> B
+```
 **SOME VERY VALUABLE READING**  
 - [lessons from implementing alphazero](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
 - [MCTS in AlphaGoZero](https://medium.com/@jonathan_hui/monte-carlo-tree-search-mcts-in-alphago-zero-8a403588276a)  

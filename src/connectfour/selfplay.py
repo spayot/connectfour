@@ -34,7 +34,9 @@ class SelfPlayConfig(object):
 
     
 
-def write_game_stats_log_line(config: SelfPlayConfig, game_length: int, game_duration: float, log_path: str, log_mode: str='a') -> None:
+def write_game_stats_log_line(config: SelfPlayConfig, 
+                              game_length: int, game_duration: float, 
+                              log_path: str, log_mode: str='a') -> None:
     fname = str(config) + ".log"
     filepath = os.path.join(log_path, fname)
     date = datetime.datetime.now().strftime('%x %X')
@@ -45,6 +47,7 @@ def write_game_stats_log_line(config: SelfPlayConfig, game_length: int, game_dur
     with open(filepath, log_mode) as f:
         print(s, file=f) 
     return filepath
+
 
 def self_play_stats(config: SelfPlayConfig, 
                     n_games: int,
