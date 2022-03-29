@@ -84,7 +84,7 @@ class PolicyValueNet():
                  m: int =  board_config['width'], 
                  filename: str = None, 
                  name: str = None, 
-                 quiet: bool = False):
+                 quiet: bool = True):
         self.n = n
         self.m = m
         self.name = name
@@ -102,6 +102,13 @@ class PolicyValueNet():
             print("To see model details, enter:\n\t>>> <pvn>.summary()""")
         else:
             print(self.model.summary())
+    
+    @classmethod
+    def from_file(cls, filename: str):
+        pvn = cls()
+        pvn.model.load_weights(filename)
+        pvn.name = _extract_model_name_from_file(filename)
+        return pvn
         
 
     def build_model(self) -> None:
@@ -158,10 +165,10 @@ class PolicyValueNet():
 
     
     def infer_from_state(self, state: ConnectFourGameState) -> (np.ndarray, float):
-        self.pvnet_fn_lock.acquire()
+        # self.pvnet_fn_lock.acquire()
         # with self.graph.as_default():
-        probs, value = self.model.predict(state.board.array.reshape(1, self.n, self.m, 1) * state.next_player.value)
-        self.pvnet_fn_lock.release()
+        probs, value = self.model.predict(state.board.reshape(1, self.n, self.m, 1) * state.next_player.value)
+        # self.pvnet_fn_lock.release()
 
         return probs[0], value[0][0] * state.next_player.value
     
@@ -198,3 +205,7 @@ class PolicyValueNet():
         
     def __repr__(self) -> str:
         return __class__.__name__ + f"(name={self.name})"
+
+    
+def _extract_model_name_from_file(filename: str):
+    return os.path.split(filename)[-1].split('.')[0]

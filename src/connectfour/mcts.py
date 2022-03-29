@@ -125,7 +125,7 @@ class MCTS(object):
         self.root = node
         self.tau = tau
 
-    def policy_improvement(self, simulations_number):
+    def policy_improvement(self, simulations_number) -> tuple[list, np.ndarray]:
         """
 
         Parameters
@@ -140,8 +140,10 @@ class MCTS(object):
 
         """
         # run n simulations
-        for _ in range(0, simulations_number):            
+        for _ in range(0, simulations_number): 
+            # walk the state tree graph until running into an unexplored node
             n = self._tree_policy()
+            # back propagate the node value
             n.backpropagate(n.V)
 
         # return improved policy based on number of visits of each actions (with a temperature coefficient and normalization step)
@@ -167,13 +169,18 @@ class MCTS(object):
         -------
 
         """
+        # start from root
         current_node = self.root
         while not current_node.is_terminal_node():
+            # choose action
             action = current_node.choose_action()
+            # if node unexplored, end while loop and return the new node visited.
             if action.N == 0:
                 return action.take_action()
+            # if node explored, update current_node and restart loop.
             else:
                 current_node = action.take_action()
+        
         return current_node
         
 

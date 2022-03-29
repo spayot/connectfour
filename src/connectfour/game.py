@@ -179,3 +179,7 @@ class ConnectFourGameState:
             ConnectFourAction(idx, self.next_player)
             for idx in indices
         ]
+    
+
+        
+    

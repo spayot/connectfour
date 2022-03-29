@@ -4,7 +4,7 @@ Name:
    connectfour
 
 Description:
-   itle
+   ConnectFour Game Environment and AlphaZero-like Agents
 
 Example:
 
@@ -14,4 +14,4 @@ Author: Sylvain Payot
 E-mail: sylvain.payot@gmail.com
 """
 
-from . import config, evaluate, game, mcts, player, pvnet, render, selfplay, train, viz
+from . import config, evaluate, game, mcts, player, pvnet, render, selfplay, train, viz, strategies, compete

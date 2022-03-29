@@ -130,7 +130,7 @@ class AzPlayer(object):
         assert abs((policy.sum()-1) < 1e-8), f"sum of policy is not equal to 1:\n{policy}"
         
         # transform policy into format similar to evaluator output (np.ndarray)
-        Pi = np.zeros(node.state.board_size[1])
+        Pi = np.zeros(node.state.board.shape[1])
         Pi[[action.move.x_coordinate for action in actions]] = policy
         
         # returns the index of the 
