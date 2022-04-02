@@ -1,5 +1,6 @@
 # ConnectFour x AlphaZero
 *Hobby Project during my visa-related forced unpaid leave in spring 2020!!*
+*Refactored in Spring 2022*
 
 - AlphaGo Paper: https://arxiv.org/abs/1712.01815
 

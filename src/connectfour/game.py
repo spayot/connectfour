@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Defines Actions and Game States for a connect four game.
 
-Abstract Game classes: https://github.com/int8/monte-carlo-tree-search
+credits for inspiration: https://github.com/int8/monte-carlo-tree-search
 """
 
 from dataclasses import dataclass
@@ -164,9 +165,6 @@ class ConnectFourGameState:
         
         # assign new position to player
         new_board[y_coordinate, action.x_coordinate] = action.player.value
-        
-        # get next player
-        next_player = self.next_player.get_next()
 
         return ConnectFourGameState(board=new_board, 
                                     next_player=self.next_player.get_next(), 

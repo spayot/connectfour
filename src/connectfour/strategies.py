@@ -21,6 +21,7 @@ from scipy import stats
 from .game import ConnectFourGameState, ConnectFourAction, Player
 from .config import ConnectFourGameConfig
 from .pvnet import PolicyValueNet
+# from .mcts import 
 
 
 # strategy pattern is implemented here as a function with defined input and output
@@ -50,19 +51,26 @@ REGISTERED_STRATEGIES = {
 }
 
 class RawPVNetStrategy:
+    """evaluates value of each action using a PolicyValueNet
+    and selects the action based on the raw policy for that state (no MCTS)."""
     def __init__(self, pvn: PolicyValueNet, temperature: float = 1):
         self.pvn = pvn
         self.temperature = temperature
         
     def select_action(self, state: ConnectFourGameState) -> ConnectFourAction:
+        """evaluates each action's value (policy) expressed as a probability of being the best action, 
+        then samples one action from that policy distribution.
+        """
         policy, value = self.pvn.infer_from_state(state)
         return choose_action_from_policy(state, policy, self.temperature)
         
         
+# class MctsPvnStrategy:
+#     def __init__(self, pvn: PolicyValueNet):
+#         pass
         
         
-        
-def choose_action_from_policy(state: np.ndarray, 
+def choose_action_from_policy(state: ConnectFourGameState, 
                               policy: np.ndarray,
                               temperature: float = 1.) -> ConnectFourAction:
     

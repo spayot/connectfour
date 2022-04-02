@@ -79,16 +79,15 @@ class TemperatureSchedule(object):
         self.tau_start = tau_start
         self.tau_end = tau_end
         self.threshold = threshold
-        self.tau = [tau_start if i < threshold else tau_end for i in range(board_config["width"] * board_config["height"])]
     
-    def get(self, i: int) -> float:
+    def __getitem__(self, i: int) -> float:
         """get the temperature value for the i-th move.
         Args:
             i (int): the move number.
         
         Returns:
             float: the specified temperature value for this move."""
-        return self.tau[i]
+        return self.tau_start if i < self.threshold else self.tau_end
     
     def __repr__(self):
         return f"{self.tau_start}-{self.threshold}-{self.tau_end}".replace('.', '')
@@ -164,7 +163,7 @@ class AzPlayer(object):
         
         # play game
         while not node.is_terminal_node():
-            action, policy = self.play(node, tau=tau.get(i), n_sims=n_sims)
+            action, policy = self.play(node, tau=tau[i], n_sims=n_sims)
             game_history.add_move(node, policy)
             node = action.take_action()
             

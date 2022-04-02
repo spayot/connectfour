@@ -17,6 +17,7 @@ Note: This skeleton file can be safely removed if not needed!
 
 import numpy as np
 
+from .game import ConnectFourGameState, ConnectFourAction
 from .config import mcts_config
 from .pvnet import PolicyValueNet
 
@@ -26,31 +27,63 @@ __license__ = "mit"
 
 # hyperparameters
 
-class MctsNode(object):
-    def __init__(self, state, evaluator: PolicyValueNet, parent=None):
+class MctsNode:
+    def __init__(self, 
+                 state: ConnectFourGameState, 
+                 evaluator: PolicyValueNet, 
+                 parent=None,
+                 c_puct: float = 4):
+        """expresses a game-state in the form of a Monte Carlo Tree Search node.
+        This node is created at Tree Expansion stage in the MCTS process. 
+        
+        Attributes:
+            state: the Game State this node is representing
+            evaluator: a callable that takes a state as an input and outputs a 
+                policy distribution (np.ndarray of shape (7,)) and an expected
+                value for that state (float between -1 and 1)
+            parent: a MctsAction. defaults to None. if None: the node is the root
+                of the search tree.
+            V: the expected value for that state (Derived from evaluator)
+            actions (list[MctsActions]): the list of legal child MctsAction for this state.
+            c_puct: a coefficient driving how much weight is given to the evaluator's prior
+                vs the results of MCTS simulations. Defaults to 4.
+        
+        Resources:
+            https://en.wikipedia.org/wiki/Monte_Carlo_tree_search
+        """
         self.state = state
-        self.parent = parent
+        self.parent = parent # MctsAction
         self.evaluator = evaluator
+        self.c_puct = c_puct
+        
+        # at tree expansion, we need to estimate the value 
         P, V = evaluator.evaluate_state(state)
         # V: estimated value of being in that state
         self.V = V
-        # print(P, V) # temp
         self.actions = [MctsAction(state, move, prior=P[move.x_coordinate], parent=self) for move in state.get_legal_actions()]
         
-        # if self.parent:
-        #     self.parent.backpropagate(V)
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"MCTS NODE: \n{self.state}\n{self.V:.4f}"
     
    
-    def get_ucb(self, action, total_node_visits):
-        """computing UCB value for a given action"""
-        ucb = mcts_config['C_PUCT'] * action.P * np.sqrt(total_node_visits)/ (1 + action.N)
+    def get_ucb(self, action, total_node_visits: int):
+        """computing Upper-Confidence Bound (UCB) value for a given child action following.
+        UCB = C_PUCT * Prior_{Action} * sqrt(total_node_visits) / (1 + action_visits)
+        
+        Args:
+            action (MctsAction): the child action to compute ucb for
+            total_node_visits: the total number of visits for this node
+        """
+        ucb = self.c_puct * action.P * np.sqrt(total_node_visits)/ (1 + action.N)
         return ucb 
     
     def choose_action(self):
-        """choose action with highest $Q(s,a)+U(s,a)$"""
+        """Choose the child action with highest $Q(s,a)+U(s,a)$ value
+        
+        Returns:
+            MctsAction: the child action selected.
+            """
         assert self.is_terminal_node() == False
         
         total_node_visits = np.sum([action.N for action in self.actions]) + 1
@@ -69,24 +102,31 @@ class MctsNode(object):
         
         return self.actions[idx]
     
-    def backpropagate(self, V):
+    def backpropagate(self, V: float) -> None:
+        """Every time MCTS expands the search tree to a child node following that action, the
+        expected value for each action is updated through backpropagation"""
         if self.parent:
             self.parent.backpropagate(V)
             
-    def is_terminal_node(self):
+    def is_terminal_node(self) -> bool:
+        """defines whether the game is over or not."""
         return self.state.is_game_over()
     
     
     
-class MctsAction(object):
-    def __init__(self, state, move, prior, parent=None):
+class MctsAction:
+    def __init__(self, 
+                 state: ConnectFourGameState, 
+                 move: ConnectFourAction, 
+                 prior: float, 
+                 parent=None):
         self.state = state
-        self.move = move
-        self.parent = parent
-        self.Q = 0
-        self.N = 0
-        self.W = 0
-        self.P = prior
+        self.move = move 
+        self.parent = parent # MctsNode
+        self.Q: float = 0. # Q(s,a) action value
+        self.N: int = 0 # number of times this action was selected during the Selection process
+        self.W: float = 0. # sum of values of all expanded child nodes
+        self.P: float = prior # action's value based on the original estimator
         self.child = None
         
     def __repr__(self):
@@ -106,6 +146,8 @@ class MctsAction(object):
         return self.child
         
     def backpropagate(self, V):
+        """Every time MCTS expands the search tree to a child node following that action, the
+        expected value for each action is updated through backpropagation"""
         self.W += V
         self.N += 1
         self.Q = self.W / self.N
@@ -114,18 +156,18 @@ class MctsAction(object):
     
     
 class MCTS(object):
-
-    def __init__(self, node: MctsNode, tau: float=mcts_config['tau']):
+    def __init__(self, node: MctsNode, tau: float):
         """
         Node
         Parameters
         ----------
-        node : mctspy.tree.nodes.MctsAlaphaZeroNode
+        node : the MctsNode to start hte tree search from.
+        tau: 
         """
         self.root = node
         self.tau = tau
 
-    def policy_improvement(self, simulations_number) -> tuple[list, np.ndarray]:
+    def policy_improvement(self, simulations_number: int) -> tuple[list[MctsAction], np.ndarray]:
         """
 
         Parameters
@@ -141,16 +183,14 @@ class MCTS(object):
         """
         # run n simulations
         for _ in range(0, simulations_number): 
-            # walk the state tree graph until running into an unexplored node
-            n = self._tree_policy()
+            # walk the state tree graph until running into an unexplored node (selection and tree expansion)
+            node = self._tree_policy()
             # back propagate the node value
-            n.backpropagate(n.V)
+            node.backpropagate(node.V)
 
-        # return improved policy based on number of visits of each actions (with a temperature coefficient and normalization step)
-#         Ns = np.zeros(self.root.state.board_size[1])
-#         for action in self.root.actions:
-#             Ns[action.move.x_coordinate] = action.N 
-        Ns = np.array([action.N for action in self.root.actions])
+        # improved policy is proportional to the number of times each action
+        # was selected during the simulations
+        Ns = np.array([mcts_action.N for mcts_action in self.root.actions])
         
         # apply temperature factor
         Ns = np.power(Ns, (1 / self.tau))
@@ -161,23 +201,23 @@ class MCTS(object):
         return self.root.actions, Ns
         
 
-    def _tree_policy(self):
+    def _tree_policy(self) -> MctsNode:
         """
-        selects node to playout until new action is expanded.
+        Selects nodes to playout in the search tree it expands to a new node.
 
-        Returns
-        -------
+        Returns: 
+            MctsNode: the new node after expansion
 
         """
         # start from root
         current_node = self.root
         while not current_node.is_terminal_node():
-            # choose action
+            # choose action based with highest $Q(s,a)+U(s,a)$
             action = current_node.choose_action()
             # if node unexplored, end while loop and return the new node visited.
             if action.N == 0:
                 return action.take_action()
-            # if node explored, update current_node and restart loop.
+            # if node explored, update current_node and restart loop (Selection).
             else:
                 current_node = action.take_action()
         
