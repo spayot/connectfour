@@ -3,7 +3,6 @@
 Defines Actions and Game States for a connect four game.
 
 TO DO:
-- better comment and document the code
 - replace with strategies and compete approach
 """
 import argparse
@@ -12,39 +11,106 @@ import os
 import connectfour as c4
 
 
-def display_state(node):
+def display_state(node: c4.mcts.MctsNode) -> None:
+    """defines how each game state should be displayed in the terminal.
+    
+    Args:
+        node: the MctsNode associated with that game state."""
     os.system('clear')
     print(node.state)
+    
+    
+def assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> dict:
+    """returns a dictionary with feedback on whether the input
+    was valid or not. type: (VALID, INVALID, EXIT).
+    if it is invalid, it also includes a feedback message"""
+    
+    # exit scenario
+    if user_input.lower() == 'x':
+        exit()
+    
+    # non-integer values
+    if not user_input.isnumeric():
+        return {'type': 'INVALID', 'message': 'you need to enter an integer between 0 and 6:  '}
+    
+    # invalid integer values
+    col = int(user_input)
+    if (col > 6) | (col < 0):
+        return {'type': 'INVALID', 'message': 'you need to enter an integer between 0 and 6:  '}
+    
+    # checking for illegal moves (column already full)
+    action = c4.game.ConnectFourAction(x_coordinate=col, player=state.next_player)
+    if not state.is_move_legal(action):
+        return {'type': 'INVALID', 'message': 'this column is already full. try again!  '}
+    
+    return {'type': 'VALID', 'message': None}
+    
+    
+def get_user_input(state: c4.game.ConnectFourGameState) -> int:
+    """allows to collect user input for the next move and verify the move is valid.
+    allows user to enter a different value if the original input is invalid."""
+    
+    msg = """your turn! what column do you want to play in [0-6]? type X to exit:  """
+    user_input = input(msg)
+    is_input_valid = assess_user_move(user_input, state)
+    
+    while is_input_valid['type'] == 'INVALID':
+        # ask for new input with appropriate feedback message
+        user_input = input(is_input_valid['message'])
+        
+        # revalidate the output
+        is_input_valid = assess_user_move(user_input, state)
+    
+    return int(user_input)        
+    
 
+    
 def play_game(model_path: str, tau: float, n_sims: int) -> None:
-    evaluator = c4.pvnet.PolicyValueNet(filename=model_path, quiet=True)
+    """interface to play a game against an AlphaZero-like agent.
+    
+    Args:
+        model_path: allows to select which generation to play against
+        tau: the temperature defining how greedy the AI agent will be
+        n_sims: the number of MCTS simulations the agent will perform to
+            improve on its raw evaluator policy.
+            
+    Returns:
+        None"""
+    
+    # instantiate evaluator
+    evaluator = c4.pvnet.PolicyValueNet.from_file(filename=model_path)
     print('evaluator:', evaluator.name)
+    
+    # instantiate the AlphaZero agent
     az_player = c4.player.AzPlayer(evaluator)
-
+    
+    # initialize the game
     state = c4.game.ConnectFourGameState(board=None, next_player=c4.game.Player.x)
     node = c4.mcts.MctsNode(state, evaluator)
+    turns = 0 # a counter of the number of moves so far
+    
     while not node.is_terminal_node():
+        # render current state
         display_state(node)
+        if turns % 2 == 0 and turns > 0:
+            print('raw evaluator:', evaluator_policy.round(2), round(value, 3))
+            print('with mcts:    ', mcts_policy.round(2))
+        
+        # switch player turn
         next_player = node.state.next_player
         
+        # player
         if next_player == c4.game.Player.x:
-            try:
-                print('evaluator:', evaluator_policy.round(2), round(value, 3))
-                print('with mcts:', mcts_policy.round(2))
-            except Exception:
-                pass
-            col = input("your turn! what column do you want to play in [0-6]:")
-            col = int(col)
             
-            if col not in list(range(7)):
-                col = input("improper value. choose a column between 0 and 6:")
+            # get user chosen action
+            col = get_user_input(node.state)
             
+            
+            # note: this approach loses all the previous discoveries from the tree search.
+            # better approach in the future: prune tree from all branches corresponding to 
+            # actions not chosen by the human player, to inherit the existing tree.
             action = c4.game.ConnectFourAction(x_coordinate=col, player=next_player)
             
-            if not node.state.is_move_legal(action):
-                col = input("column is already full. choose another column:")
-                action = c4.game.ConnectFourAction(x_coordinate=col, player=next_player)
-
             state = node.state.move(action)
             
             node = c4.mcts.MctsNode(state, evaluator)
@@ -59,6 +125,8 @@ def play_game(model_path: str, tau: float, n_sims: int) -> None:
 
             # discard rest of tree
             node.parent = None
+            
+        turns += 1
     
     os.system('clear')
     print(node.state)
@@ -66,11 +134,11 @@ def play_game(model_path: str, tau: float, n_sims: int) -> None:
     result = node.state.game_result
     
     if result == c4.game.Player.x.value:
-        print("congrats! you win!")
+        print(f"congrats! you won in {turns} turns!")
     elif result == c4.game.Player.o.value:
-        print("good try! but you lost... game over")
+        print(f"good try! but you lost in {turns} turns... game over")
     else:
-        print('what a draw!')
+        print('what a draw! good game.')
 
 
 

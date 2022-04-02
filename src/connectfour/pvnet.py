@@ -42,7 +42,9 @@ def softmax(x: np.ndarray) -> np.ndarray:
     probs /= np.sum(probs)
     return probs
 
-def crossentropy_loss(y_true, y_pred, eps=1e-10):
+def crossentropy_loss(y_true: np.ndarray, 
+                      y_pred: np.ndarray, 
+                      eps: float = 1e-10) -> tf.Tensor:
     return - K.mean(K.sum(y_true * K.log(y_pred + eps), axis=1))
 
 
@@ -80,9 +82,8 @@ def residual_block(input_tensor, kernel_size, filter, l2_const):
 
 
 class PolicyValueNet():
-    def __init__(self, n: int = board_config['height'], 
-                 m: int =  board_config['width'], 
-                 filename: str = None, 
+    def __init__(self, n: int = 6, 
+                 m: int =  7, 
                  name: str = None, 
                  quiet: bool = True):
         self.n = n
@@ -93,9 +94,9 @@ class PolicyValueNet():
 
         self.build_model()
         
-        if filename != None and os.path.exists(filename):
-            self.model.load_weights(filename)
-            self.name = os.path.split(filename)[-1].split('.')[0]
+        # if filename != None and os.path.exists(filename):
+        #     self.model.load_weights(filename)
+        #     self.name = os.path.split(filename)[-1].split('.')[0]
     
         
         if quiet:

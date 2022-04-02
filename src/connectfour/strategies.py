@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Description:
-   Defines a function-based Strategy Pattern used in the compete module.
+   Defines a function-based strategy pattern used in the compete module.
    Each strategy takes a ConnectFourGameState as an input and outputs a ConnectFourGameAction.
 
 Example:
     /
     
-Todo:
-* raw evaluator (PVNet) without MCTS
+TO DOs:
 * MCTS strategy without policy/value evaluator
 * Truncated MCTS with evaluator
 """
@@ -24,7 +23,7 @@ from .pvnet import PolicyValueNet
 # from .mcts import 
 
 
-# strategy pattern is implemented here as a function with defined input and output
+# the strategy pattern is implemented here as a function with defined input and output
 ChooseActionStrategy = Callable[[ConnectFourGameState], ConnectFourAction]
 
 def random_strategy(state: ConnectFourGameState) -> ConnectFourAction:
@@ -34,21 +33,23 @@ def random_strategy(state: ConnectFourGameState) -> ConnectFourAction:
         state: a connect four game state
         
     Returns:
-        action: a ConnectFourAction"""
+        ConnectFourAction: a legal action for that state randomly selected"""
     possible_actions = state.get_legal_actions()
     return np.random.choice(possible_actions)
     
     
+    
 def leftmost_strategy(state: ConnectFourGameState) -> ConnectFourAction:
-    """always plays left-most legal action."""
+    """always plays left-most legal action.
+    
+    Args:
+        state: a connect four game state
+        
+    Returns:
+        ConnectFourAction: a legal action for that state randomly selected"""
     possible_actions = state.get_legal_actions()
     return possible_actions[0]
 
-
-REGISTERED_STRATEGIES = {
-    'random': random_strategy,
-    'leftmost': leftmost_strategy,
-}
 
 class RawPVNetStrategy:
     """evaluates value of each action using a PolicyValueNet
@@ -73,6 +74,17 @@ class RawPVNetStrategy:
 def choose_action_from_policy(state: ConnectFourGameState, 
                               policy: np.ndarray,
                               temperature: float = 1.) -> ConnectFourAction:
+    """Selects an action based on a policy distribution after applying 
+    a temperature factor. 
+    
+    Args: 
+        state: the state before the player
+        policy: an array describing a distribution of probability that each child action is the best.
+            the array is expected to be of the same size than the board (# of columns).
+        temperature: a temperature factor. the lower the temperature, the more greedy the selection.
+        
+    Returns:
+        ConnectFourAction"""
     
     # get legal_actions
     legal_actions = state.get_legal_actions()
