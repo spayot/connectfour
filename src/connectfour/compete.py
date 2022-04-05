@@ -184,7 +184,7 @@ def tournament(strategies: dict[str, ChooseActionStrategy],
 
 def show_tournament_results(tournament_results: pd.DataFrame, *args, **kwargs) -> None:
     sns.heatmap(tournament_results, 
-                cmap='Blues', 
+                cmap='coolwarm', 
                 annot=True, 
                 fmt=".1%", 
                 *args, **kwargs)

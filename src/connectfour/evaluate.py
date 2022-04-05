@@ -69,32 +69,3 @@ class Evaluator(object):
         gen_name = os.path.split(fname)[-1].split('.')[0]
         pvn = PolicyValueNet(filename=fname, name=gen_name, quiet=True)
         return cls(pvn=pvn)
-
-
-# def compare_strategies(strat1, strat2, n_games=20, print_summary=True):
-#     """compares 2 strategies by playing them against each other for a given number of games and recording number of wins per player."""
-#     outcomes = []
-#     for i in range(n_games):
-#         # initialize game
-#         starting_player = 1 - 2 * (i % 2)
-#         initial_board_state = ConnectFourGameState(board=np.zeros((6,7)), next_to_move=starting_player)
-#         node = MctsNode(state = initial_board_state)
-
-#         # play game
-#         while not node.state.is_game_over():
-#             play = strategies.get(node.state.next_to_move)
-#             node = play(node)
-
-#         # record results
-#         outcomes.append({'starting_player': starting_player, 'result': node.state.game_result})
-    
-#     outcomes = pd.DataFrame(outcomes)
-#     if print_summary:
-#         wins = outcomes.result.value_counts()
-#         print(f"number of games played: {n_games:,}")
-#         print("outcomes:")
-#         print(f"\tplayer 1: {wins.get(1):>5,} {wins.get(1)/n_games:>10.1%}")
-#         print(f"\tplayer 2: {wins.get(-1):>5,} {wins.get(-1)/n_games:>10.1%}")
-#         print(f"\tdraws:    {wins.get(0, 0):>5,} {wins.get(0, 0)/n_games:>10.1%}")
-        
-#     return outcomes

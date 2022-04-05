@@ -17,7 +17,8 @@ Note: This skeleton file can be safely removed if not needed!
 
 import numpy as np
 
-from .game import ConnectFourGameState, ConnectFourAction, Player
+from .game import ConnectFourGameState, ConnectFourAction
+from .config import mcts_config
 from .pvnet import PolicyValueNet
 
 __author__ = "Sylvain Payot"
@@ -29,16 +30,20 @@ __license__ = "mit"
 class MctsNode:
     def __init__(self, 
                  state: ConnectFourGameState, 
+                 evaluator: PolicyValueNet, 
                  parent=None,
-                 c_puct: float = 4.):
+                 c_puct: float = 4):
         """expresses a game-state in the form of a Monte Carlo Tree Search node.
         This node is created at Tree Expansion stage in the MCTS process. 
         
         Attributes:
             state: the Game State this node is representing
+            evaluator: a callable that takes a state as an input and outputs a 
+                policy distribution (np.ndarray of shape (7,)) and an expected
+                value for that state (float between -1 and 1)
             parent: a MctsAction. defaults to None. if None: the node is the root
                 of the search tree.
-            V: the expected value for that state (derived from evaluator)
+            V: the expected value for that state (Derived from evaluator)
             actions (list[MctsActions]): the list of legal child MctsAction for this state.
             c_puct: a coefficient driving how much weight is given to the evaluator's prior
                 vs the results of MCTS simulations. Defaults to 4.
@@ -48,27 +53,21 @@ class MctsNode:
         """
         self.state = state
         self.parent = parent # MctsAction
+        self.evaluator = evaluator
         self.c_puct = c_puct
         
-        self.is_expanded = False
-        self.V: float = None # estimated value of being in that state
-        self.actions: list[MctsAction] = None
-        
+        # at tree expansion, we need to estimate the value 
+        P, V = evaluator.evaluate_state(state)
+        # V: estimated value of being in that state
+        self.V = V
+        self.actions = [MctsAction(state, move, prior=P[move.x_coordinate], parent=self) for move in state.get_legal_actions()]
         
     
     def __repr__(self) -> str:
-        return f"MctsNode( \n{self.state}\nV={self.V:.4f})"
+        return f"MCTS NODE: \n{self.state}\n{self.V:.4f}"
     
-    def expand(self, evaluator: PolicyValueNet):
-        """"""
-        # at tree expansion, we need to estimate the value 
-        P, V = evaluator.evaluate_state(self.state)
-        # V: estimated value of being in that state
-        self.V = V
-        self.actions = [MctsAction(self.state, move, prior=P[move.x_coordinate], parent=self) for move in self.state.get_legal_actions()]
-        self.is_expanded = True
    
-    def get_ucb(self, action):
+    def get_ucb(self, action, total_node_visits: int):
         """computing Upper-Confidence Bound (UCB) value for a given child action following.
         UCB = C_PUCT * Prior_{Action} * sqrt(total_node_visits) / (1 + action_visits)
         
@@ -76,15 +75,8 @@ class MctsNode:
             action (MctsAction): the child action to compute ucb for
             total_node_visits: the total number of visits for this node
         """
-        ucb = self.c_puct * action.P * np.sqrt(self.total_node_visits)/ (1 + action.N)
+        ucb = self.c_puct * action.P * np.sqrt(total_node_visits)/ (1 + action.N)
         return ucb 
-    
-    @property
-    def total_node_visits(self):
-        """the number of times this node ahs been visited."""
-        if not self.is_expanded:
-            return 1
-        return np.sum([action.N for action in self.actions]) + 1
     
     def choose_action(self):
         """Choose the child action with highest $Q(s,a)+U(s,a)$ value
@@ -94,12 +86,13 @@ class MctsNode:
             """
         assert self.is_terminal_node() == False
         
-        # multiplying Q by next to move, so that action is chosen to maximize the reward 
-        # from the current player's perspective
-        next_to_move: Player = self.state.next_player
+        total_node_visits = np.sum([action.N for action in self.actions]) + 1
+        
+        # multiplying Q by next to move, so that action is chosen based to maximize the reward from the player's perspective
+        next_to_move = self.state.next_player
         
         
-        ucbs: list[float] = [next_to_move.value * action.Q + self.get_ucb(action) for action in self.actions]
+        ucbs = [next_to_move.value * action.Q + self.get_ucb(action, total_node_visits) for action in self.actions]
         
         try:
             idx = np.argmax(ucbs)
@@ -137,7 +130,7 @@ class MctsAction:
         self.child = None # 
         
     def __repr__(self):
-        return f"MCTS Action(move={self.move}, prior={self.P}, q={self.Q})"
+        return f"MCTS Action:(Move:{self.move})"
 
         
     def describe(self):
@@ -158,11 +151,9 @@ class MctsAction:
             MctsNode: the node derived from selecting that action."""
         if self.N == 0:
             new_state = self.state.move(self.move)
-            self.child = MctsNode(new_state, parent=self)
-        
+            self.child = MctsNode(new_state, self.parent.evaluator, parent=self)
         if prune:
             self.child.parent = None
-        
         return self.child
         
     def backpropagate(self, V):
@@ -175,28 +166,18 @@ class MctsAction:
             self.parent.backpropagate(V)
     
     
-class TruncatedMCTS(object):
-    def __init__(self, 
-                 root: MctsNode, 
-                 evaluator: PolicyValueNet, 
-                 tau: float):
+class MCTS(object):
+    def __init__(self, node: MctsNode, tau: float):
         """
         Node
         Parameters
         ----------
-        root : the MctsNode to start the tree search from.
-        tau: the temperature controlling the explore/exploit trade-off
-        evaluator: PolicyValueNet used to evaluate nodes and children actions at
-            expansion time.
+        node : the MctsNode to start hte tree search from.
+        tau: 
         """
-        self.root = root
-        if not root.is_expanded:
-            root.expand(evaluator)
-            
-        self.evaluator = evaluator
+        self.root = node
         self.tau = tau
 
-        
     def policy_improvement(self, simulations_number: int) -> tuple[list[MctsAction], np.ndarray]:
         """
 
@@ -231,7 +212,6 @@ class TruncatedMCTS(object):
         return self.root.actions, Ns
         
 
-    
     def _tree_policy(self) -> MctsNode:
         """
         Selects nodes to playout in the search tree it expands to a new node.
@@ -255,13 +235,15 @@ class TruncatedMCTS(object):
             # define new node given the chosen action
             current_node = action.take_action(prune=False)
             
-            # if node unexplored, end while loop, expand new node and return it
-            if not current_node.is_expanded:
-                current_node.expand(evaluator=self.evaluator)
+            # if node unexplored, end while loop and return the new node visited.
+            if action.N == 0:
                 return current_node
             
             # if node already explored, continue down the tree
                 
-        # handle terminal nodes
+        
         return current_node
         
+
+    
+

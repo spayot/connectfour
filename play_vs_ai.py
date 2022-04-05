@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Defines Actions and Game States for a connect four game.
+Allows a human player to play against an AlphaZero Agent on the terminal.
+
+% python3 play_vs_ai.py --temperature 1 --n_sims 100 --model_path "models/gen9.h5"
 
 TO DO:
 - replace with strategies and compete approach
@@ -65,12 +67,12 @@ def get_user_input(state: c4.game.ConnectFourGameState) -> int:
     
 
     
-def play_game(model_path: str, tau: float, n_sims: int) -> None:
+def play_game(model_path: str, temperature: float, n_sims: int) -> None:
     """interface to play a game against an AlphaZero-like agent.
     
     Args:
         model_path: allows to select which generation to play against
-        tau: the temperature defining how greedy the AI agent will be
+        temperature: the temperature defining how greedy the AI agent will be
         n_sims: the number of MCTS simulations the agent will perform to
             improve on its raw evaluator policy.
             
@@ -90,16 +92,19 @@ def play_game(model_path: str, tau: float, n_sims: int) -> None:
     turns = 0 # a counter of the number of moves so far
     
     while not node.is_terminal_node():
+        
         # render current state
         display_state(node)
+        
+        # display calculated policy when it follows AZ's turn
         if turns % 2 == 0 and turns > 0:
-            print('raw evaluator:', evaluator_policy.round(2), round(value, 3))
+            print('raw evaluator:', evaluator_policy.round(2), f'\texpected value: {value:.3f}')
             print('with mcts:    ', mcts_policy.round(2))
         
         # switch player turn
         next_player = node.state.next_player
         
-        # player
+        # human player turn
         if next_player == c4.game.Player.x:
             
             # get user chosen action
@@ -113,23 +118,22 @@ def play_game(model_path: str, tau: float, n_sims: int) -> None:
             
             state = node.state.move(action)
             
-            node = c4.mcts.MctsNode(state, evaluator)
+            node = c4.mcts.MctsNode(state, evaluator) # can be improved on to take further advantage of previous simulations
 
-
+        # AlphaZero Agent turn
         else:
-            action, mcts_policy = az_player.play(node, tau=tau, n_sims=n_sims)
+            # selects action
+            chosen_action, mcts_policy = az_player.play_single_turn(node, tau=temperature, n_sims=n_sims)
+            # this evaluation is not necessary to play the game, but simply to visualize the
+            # raw policies 
             evaluator_policy, value = evaluator.infer_from_state(node.state)
             
-
-            node = action.take_action()
-
-            # discard rest of tree
-            node.parent = None
+            # execute action and prune tree branches related to alternative actions
+            node = chosen_action.take_action(prune=True)
             
         turns += 1
     
-    os.system('clear')
-    print(node.state)
+    display_state(node)
     # assess result of the game
     result = node.state.game_result
     
@@ -147,13 +151,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--modelpath",
                         default='models/gen9.h5',
-                        help="the policy-value estimator to power AlphaZero",
+                        help="the path to the policy-value estimator to power AlphaZero",
                         type=str)
     parser.add_argument("-t", "--temperature", 
                         default=1, 
                         nargs='?', 
                         type=float, 
-                        help="the higher the temperature, the more greedy the player")
+                        help="the higher the temperature, the more greedily the agent selects the most promising moves.")
     
     parser.add_argument("-n", "--n_simulations", 
                         default=100, 
@@ -162,7 +166,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    play_game(model_path=args.modelpath, tau=args.temperature, n_sims=args.n_simulations)
+    play_game(model_path=args.modelpath, temperature=args.temperature, n_sims=args.n_simulations)
     
     
     

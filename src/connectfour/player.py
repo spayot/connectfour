@@ -17,80 +17,12 @@ from scipy import stats
 
 from .game import ConnectFourGameState
 from .pvnet import PolicyValueNet
-from .mcts import MctsNode, MctsAction, MCTS
-from .config import board_config, selfplay_config, mcts_config
-
-class GameHistory(object):
-    """standardized format to record historical connect four games. 
-    Args:
-        None
-        
-    Attributes:
-        history (list): a list of tuples (state, improved_policy), with 
-            state being a ConnectFourGameState object, and improved_policy
-            being a 7x1 array corresponding to the probability distribution 
-            obtained after MCTS simulations.
-        outcome (int): the game result (1: player 1 wins, -1: player 2 wins,
-            0: draw)
-        
-    """
-    def __init__(self):
-        self.history = []
-        self.outcome = None
-    
-    def add_move(self, node: MctsNode, improved_policy: np.ndarray):
-        """records a new (state, policy) tuple to the game history"""
-        self.history.append((node.state, improved_policy))
-    
-    def update_outcome(self, outcome: int):
-        """adds final outcome of a game to GameHistory (-1 or 1)"""
-        self.history = [move + (outcome,) for move in self.history]
-        self.outcome = outcome
-
-    
-    @property
-    def game_length(self):
-        """returns the number of moves played until the game was over."""
-        return len(self.history)
+from .mcts import MctsNode, MctsAction, TruncatedMCTS
+from .config import board_config, selfplay_config
+from .record import GameRecord
+from .temperature import TemperatureSchedule
 
 
-class TemperatureSchedule(object):
-    """defines the evolution of temperature parameter tau at each round of the game.
-    The temperature helps to control the level of exploration-exploitation tradeoff 
-    by either smoothing the move distribution obtained after MCTS (tau > 1) or increasing 
-    on the contrary thechances to select the best candidate identified for the next 
-    step (tau << 1).
-    
-    Note: tau = 1 means that the distribution will be proporational to the number of 
-    node visits.
-    
-    
-    Args:
-        tau_start (float, optional): the value for tau for the first steps
-        threshold (int, optional): the number of steps until tau switches from 
-        tau_start to tau_end.
-        tau_end (float, optional): the value 
-        
-    Note: default values are defined in the config module of this package.
-    """
-    def __init__(self, tau_start: float=selfplay_config["tau_start"],  
-                threshold: int=selfplay_config["threshold"],
-                tau_end: float= selfplay_config["tau_end"]):
-        self.tau_start = tau_start
-        self.tau_end = tau_end
-        self.threshold = threshold
-    
-    def __getitem__(self, i: int) -> float:
-        """get the temperature value for the i-th move.
-        Args:
-            i (int): the move number.
-        
-        Returns:
-            float: the specified temperature value for this move."""
-        return self.tau_start if i < self.threshold else self.tau_end
-    
-    def __repr__(self):
-        return f"{self.tau_start}-{self.threshold}-{self.tau_end}".replace('.', '')
 
 
 class AzPlayer(object):
@@ -114,14 +46,15 @@ class AzPlayer(object):
     """
     def __init__(self, evaluator: PolicyValueNet):
         self.evaluator = evaluator
-        self.memory = [] # a list of GameHistory objects
+        self.memory = [] # a list of GameRecord objects
         
-    def play(self, node: MctsNode, tau: float, n_sims: int) -> (MctsAction, np.ndarray):
+    
+    def play_single_turn(self, node: MctsNode, tau: float, n_sims: int) -> tuple[MctsAction, np.ndarray]:
         """implements sampling from available actions, using MCTS-based policy improvement """
         
         assert node.is_terminal_node() == False, f"node is a terminal node: {node.state}"
         
-        mcts = MCTS(node, tau=tau)
+        mcts = TruncatedMCTS(root=node, tau=tau, evaluator=self.evaluator)
         
         # get mcts-improved policy, and updates tree Q, N, ...
         actions, policy = mcts.policy_improvement(n_sims)
@@ -144,52 +77,56 @@ class AzPlayer(object):
         chosen_action = actions[action_chooser.rvs()]
         
         return chosen_action, Pi
+    
+    
         
     
-    def self_play(self, tau: TemperatureSchedule = TemperatureSchedule(**selfplay_config), 
-                  n_sims: int = mcts_config["sims"]) -> None:
-        """player plays against itself and saves its improved policies and game outcome into a GameHistory object"""
+    def self_play(self, 
+                  tau: TemperatureSchedule, 
+                  n_sims: int) -> None:
+        """player plays one game against itself and saves its improved policies and game outcomes into a GameRecord object"""
         # initialize game
-        game_history = GameHistory()
+        game_record = GameRecord()
         
         if type(tau)==float:
             tau = TemperatureSchedule(tau_start=tau, threshold=0, tau_end=tau)
         
         starting_player = np.random.choice([-1,1])
-        initial_board_state = ConnectFourGameState(board=np.zeros((6,7), dtype=np.int64), next_to_move=starting_player)
-        node = MctsNode(state = initial_board_state, evaluator=self.evaluator)
-        
-        i = 0
+        initial_board_state = ConnectFourGameState(next_player=starting_player)
+        node = MctsNode(state = initial_board_state)
+
         
         # play game
         while not node.is_terminal_node():
-            action, policy = self.play(node, tau=tau[i], n_sims=n_sims)
-            game_history.add_move(node, policy)
-            node = action.take_action()
+            # select aciton and output policy
+            action, policy = self.play_single_turn(node, tau=next(tau), n_sims=n_sims)
+            game_record.add_move(node, policy)
+            node = action.take_action(prune=True)
             
-            # discard rest of tree
-            node.parent = None
-            
-            i += 1
         
         outcome = node.state.game_result
         
-        # add last node to the history
-        game_history.add_move(node, np.ones(board_config['width']) / board_config['width'])
+        # add terminal node to the history
+        board_width = node.state.game_config.shape[1]
+        game_record.add_move(node, np.ones(board_width) / board_width)
         
         # update final game outcome
-        game_history.update_outcome(outcome)
-        self.memory.append(game_history)
+        game_record.update_outcome(outcome)
+        self.memory.append(game_record)
     
-    def save_history(self, filepath, return_history=False, open_mode='ab'):
+    def save_history_to_pickle(self, 
+                     filepath: str, 
+                     return_history: bool = False, 
+                     open_mode: str = 'ab'):
         """saves history from all games played so far into <filepath> in a pickle format"""
+        
         assert open_mode in ['ab', 'wb'], "improper open_mode. needs to be either 'ab' or 'wb'"
         
         # vectorize memory
-        boards = np.array([s.board for g in self.memory for s, p, r in g.history])
-        next_to_move = np.array([s.next_to_move for g in self.memory for s, p, r in g.history])
-        policies = np.array([p for g in self.memory for s, p, r in g.history])
-        results = np.array([r for g in self.memory for s, p, r in g.history])
+        boards = np.array([state.board for game in self.memory for state, policy, result in game.history])
+        next_to_move = np.array([state.next_to_move for game in self.memory for state, policy, result in game.history])
+        policies = np.array([policy for game in self.memory for state, policy, result in game.history])
+        results = np.array([result for game in self.memory for state, policy, result in game.history])
         
         # create object to save:
         history = {
@@ -199,7 +136,7 @@ class AzPlayer(object):
             'output_policy': policies,
             'output_value': results}
         
-        # if append=True, history is appended at the end of a pre-existing memory file
+        # if open_mode == 'ab', history is appended at the end of a pre-existing memory file
         
         with open(filepath, open_mode) as f:
             pickle.dump(history, f)
@@ -208,6 +145,6 @@ class AzPlayer(object):
             return history
         
         
-    def __repr__(self) -> str:
-        return __class__.__name__ + f"(evaluator={self.evaluator})"
+    # def __repr__(self) -> str:
+    #     return __class__.__name__ + f"(evaluator={self.evaluator})"
         
