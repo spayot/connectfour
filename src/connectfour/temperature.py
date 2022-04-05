@@ -28,9 +28,12 @@ class TemperatureSchedule:
     tau_start: float = 1
     threshold: int = 10
     tau_end: float = 0.1
-    counter: int = field(default=0, init=False, repr=False)
     
+    def __post_init__(self):
+        self.counter: int = 0 # field(default=0, init=False, repr=False)
+        
     def __next__(self):
         value = self.tau_start if self.counter < self.threshold else self.tau_end
         self.counter += 1
         return value
+    

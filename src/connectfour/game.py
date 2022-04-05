@@ -7,7 +7,7 @@ credits for inspiration: https://github.com/int8/monte-carlo-tree-search
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,7 +35,10 @@ class ConnectFourAction:
         self.player = player
 
     def __repr__(self) -> str:
-        return f"x:{self.x_coordinate} p:{self.player.value}"
+        return f"{self.player.name.upper()} -> {self.x_coordinate}"
+    
+    def __eq__(self, other) -> bool:
+        return (self.x_coordinate == other.x_coordinate) & (self.player == other.player)
     
 
 def _board_to_str(array: np.ndarray) -> str:
@@ -74,7 +77,8 @@ def _assert_board_is_valid(board: np.ndarray, game_config: ConnectFourGameConfig
 class ConnectFourGameState: 
     def __init__(self, board: np.ndarray = None, 
                  next_player: Player = Player.x,
-                 game_config: ConnectFourGameConfig = ConnectFourGameConfig()):
+                 game_config: ConnectFourGameConfig = ConnectFourGameConfig(),
+                 last_action: Optional[ConnectFourAction] = None):
         """
         Args:
             board (np.ndarray, optional): an array of dtype int representing the board state.
@@ -89,11 +93,15 @@ class ConnectFourGameState:
         
         self.board = board
         self.next_player = next_player
+        self.last_action = last_action
         self.game_config = game_config
         
         
+        
     def __repr__(self):
-        return f"ConnectFourGameState(board:\n{_board_to_str(self.board)}\n\tnext_player={self.next_player.name}"
+        return f"""ConnectFourGameState(board:\n{_board_to_str(self.board)}
+        \tlast_action={self.last_action}
+        \tnext_player={self.next_player.name.upper()}"""
     
     @property
     def game_result(self):
@@ -134,7 +142,7 @@ class ConnectFourGameState:
         # if not over - no result
         return None
 
-    
+    @property
     def is_game_over(self) -> bool:
         """checks whether the game is over or not"""
         return self.game_result is not None
@@ -154,7 +162,7 @@ class ConnectFourGameState:
         return self.board[0, action.x_coordinate] == 0
 
     
-    def move(self, action):
+    def move(self, action: ConnectFourAction):
         # check for move validity
         assert self.is_move_legal(action), f"move {action} on board is not legal"
         
@@ -168,7 +176,8 @@ class ConnectFourGameState:
 
         return ConnectFourGameState(board=new_board, 
                                     next_player=self.next_player.get_next(), 
-                                    game_config=self.game_config)
+                                    game_config=self.game_config,
+                                    last_action=action)
 
     
     def get_legal_actions(self):

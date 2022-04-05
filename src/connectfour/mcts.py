@@ -117,7 +117,7 @@ class MctsNode:
             
     def is_terminal_node(self) -> bool:
         """defines whether the game is over or not."""
-        return self.state.is_game_over()
+        return self.state.is_game_over
     
     
     

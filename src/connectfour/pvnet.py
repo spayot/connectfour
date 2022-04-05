@@ -187,7 +187,7 @@ class PolicyValueNet():
         >>> evaluator = Evaluator(name='test')
         >>> evaluator.evaluate_state(ConnectFourGameState(board=np.zeros(6,7), next_to_move=1))"""
         
-        if state.is_game_over():
+        if state.is_game_over:
             p,v = np.ones(7)/7, state.game_result
         
         else: 
