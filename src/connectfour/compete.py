@@ -15,6 +15,7 @@ E-mail: sylvain.payot@gmail.com
 """
 
 import itertools
+import os
 import sys
 import time
 from tqdm import tqdm
@@ -53,11 +54,14 @@ def run_game(x_strategy: ChooseActionStrategy,
 
     # initialize game state
     state = ConnectFourGameState(game_config=config)
+    x_strategy.initialize_game()
+    o_strategy.initialize_game()
+    
     game_length = 0
     timer = GameTimer()
-    while not state.is_game_over():
-        choose_action = x_strategy if state.next_player == Player.x else o_strategy
-        action = choose_action(state)
+    while not state.is_game_over:
+        strategy = x_strategy if state.next_player == Player.x else o_strategy
+        action = strategy.select_action(state)
         state = state.move(action)
         game_length += 1
         timer.record_move()
@@ -102,13 +106,14 @@ def compare_strategies(strat1: ChooseActionStrategy,
 
 def plot_strat_competition_outcomes(outcomes: pd.DataFrame, 
                                     strat1_name: str, 
-                                    strat2_name: str) -> None:
+                                    strat2_name: str,
+                                    figdir: str = None) -> None:
     """plot outcomes of a competition between 2 strategies, as 
     defined in compare_strategies.
     Args:
         outcomes: a dataframe in the format of the output of `compare_strategies`
         strat1_name: a string to be used to label the first strategy
-        strat2_name: 
+        strat2_name: a string to be used to label the second strategy
     
     
     """
@@ -126,7 +131,7 @@ def plot_strat_competition_outcomes(outcomes: pd.DataFrame,
         plots.annotate(f'{col}: {bar.get_width():.1%}',
                        (bar.get_x() + .01, # + bar.get_width() / 2,
                         bar.get_y() + bar.get_height() / 2 +.03), ha='left', va='center',
-                       size=20, xytext=(0, 8),
+                       size=10, xytext=(0, 8),
                        textcoords='offset points')
         
     ax[0].set_xticks([0], [''])
@@ -156,7 +161,13 @@ def plot_strat_competition_outcomes(outcomes: pd.DataFrame,
     ax[2].set_xlim([0,42])
     
     plt.tight_layout()
+    
+    if figdir:
+        plt.savefig(os.path.join(figdir, f"{strat1_name}_vs_{strat2_name}.png"))
+        
     plt.show()
+    
+    
     
     
 def tournament(strategies: dict[str, ChooseActionStrategy], 

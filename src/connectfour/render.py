@@ -27,7 +27,7 @@ from .pvnet import PolicyValueNet
 
 def renderConnectFour(state: ConnectFourGameState, ax=None):
     radius = .3
-    board = np.flip(state.board.array,axis=0)
+    board = np.flip(state.board,axis=0)
     if not ax:
         fig, ax = plt.subplots(figsize=(3.5,3))
     

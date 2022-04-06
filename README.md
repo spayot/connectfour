@@ -4,18 +4,57 @@
 
 - AlphaGo Paper: https://arxiv.org/abs/1712.01815
 
-**GOAL**: train an agent to play Connect 4 using a strategy similar to AlphaGo Zero.
-**STRATEGY**: instead of creating a brute-force mimimax strategy (exhaustive tree search + feature engineering), we adopt a less resource-intensive approach: truncated tree search. This strategy consists in:
-- an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (ResNet) with 2 heads: a policy head with a softmax actgivation and a state value head with a sigmoid activation.
+## Goal: 
+Train an agent to play **Connect 4** using a strategy similar to **AlphaGo Zero**.
+
+Instead of creating a brute-force mimimax strategy (exhaustive tree search + feature engineering), we adopt a less resource-intensive approach: **truncated tree search**.
+
+## High Level training pipeline
+```mermaid
+graph TD
+    A(Evaluator) -->|powers MCTS prioritization| B(MCTS)
+    A -->|train next gen Evaluator| A
+    B -->C(AlphaZero Agent)
+    C -->|self-play| C
+    C -->|generate records| D(Game Records)
+    D -->|provides training data| A
+```
+ This strategy consists in:
+- an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (ResNet) with 2 heads: a policy head with a softmax activation and a state value head with a sigmoid activation.
 - a version of Monte-Carlo Tree Search that leverages this evaluator to prioritize the regions of the tree to explore further, and returns an improved policy compared to the original evaluator.  
 The evaluator is iteratively trained following batches of self-played games. Training data is gathered by using:
 - the improved policy output from MCTS for the policy head and
-- the final outcome of the game (-1,0,1) for the value head.  
-```mermaid
-flowchart:
-A --> B
+- the final outcome of the game (-1,0,1) for the value head.
+
+## Install
+Setup environment:  
+`conda install -f environment.yaml`
+
+Install the `connectfour` package with `pip`:  
+place yourself in the root folder of this project and run `pip install .`
+
+## Playing against the agent
+You can play against an agent in the terminal by running the command:
+``` 
+> python3 play_vs_ai.py --temperature 1 --n_simulations 200 
 ```
-**SOME VERY VALUABLE READING**  
+* `--temperature` controls how greedily the agent selects what it estimates the best move (lower is more greedy)
+* `--model_path` controls the version of the agent to play against (currently defaults to `models/gen9.h5`, a model trained for 9 generations)
+* `--n_simulations` controls the number of MCTS simulations to improve the policy before selecting the next move.
+
+Personally, i haven't been able to beat `gen9` with low temperature and 400 simulations. :)
+
+## Evaluating Competing Strategies
+Agents with various strategies are compared by playing against each other 50 or 100 games. Results are expressed in terms of % of games won, inference time and the distribution of the number of moves before the game ends.
+### Raw Evaluator vs AlphaZero (MCTS + Evaluator)
+![](visualizations/az_n=20_vs_raw_pvn.png)
+**Findings**: even a small number of MCTS simulations provide a significant competitive advantage over using the raw evaluator direclty to select the next action.
+### Influence of number of simulations
+![](visualizations/az20_vs_raw_pvn.png)
+![](visualizations/az100_vs_az200.png)
+**Findings**: as expected, the higher the number of simulations, the stronger the Agent. Marginal gains remain important even when going from 200 to 400 simulations.
+
+# Some Very Valuable Readings
 - [lessons from implementing alphazero](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
 - [MCTS in AlphaGoZero](https://medium.com/@jonathan_hui/monte-carlo-tree-search-mcts-in-alphago-zero-8a403588276a)  
 The former explains some implementation details and offers insights into good hyper-parameters to fine-tune a model for Connect Four:  

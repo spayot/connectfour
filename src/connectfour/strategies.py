@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Description:
-   Defines a function-based strategy pattern used in the compete module.
+   Defines a class-based strategy pattern used in the compete module.
    Each strategy takes a ConnectFourGameState as an input and outputs a ConnectFourGameAction.
 
 Example:
@@ -12,7 +12,7 @@ TO DOs:
 * Truncated MCTS with evaluator
 """
 
-from typing import Callable
+from typing import Protocol
 
 import numpy as np
 from scipy import stats
@@ -20,55 +20,113 @@ from scipy import stats
 from .game import ConnectFourGameState, ConnectFourAction, Player
 from .config import ConnectFourGameConfig
 from .pvnet import PolicyValueNet
-# from .mcts import 
+from .temperature import TemperatureSchedule
+from .player import AzAgent
 
 
-# the strategy pattern is implemented here as a function with defined input and output
-ChooseActionStrategy = Callable[[ConnectFourGameState], ConnectFourAction]
+class ChooseActionStrategy(Protocol):
+    def initialize_game(self) -> None:
+        """re-initializes the game state strategy know that a new game is starting.
+        Not needed for all strategies, but mandatory for the AlphaZero, which builds
+        its own representation of the current state to navigate the search tree."""
+        ...
+    
+    def select_action(self, state: ConnectFourGameState) -> ConnectFourAction:
+        """defines how the strategy selects the next action."""
+        ...
+    
 
-def random_strategy(state: ConnectFourGameState) -> ConnectFourAction:
-    """randomly selects any legal action for a given state
+class RandomStrategy:
+    def initialize_game(self) -> None:
+        pass
     
-    Args:
-        state: a connect four game state
-        
-    Returns:
-        ConnectFourAction: a legal action for that state randomly selected"""
-    possible_actions = state.get_legal_actions()
-    return np.random.choice(possible_actions)
+    def select_action(self, state: ConnectFourGameState) -> ConnectFourAction:
+        """randomly selects any legal action for a given state
+
+        Args:
+            state: a connect four game state
+
+        Returns:
+            ConnectFourAction: a legal action for that state randomly selected"""
+        possible_actions = state.get_legal_actions()
+        return np.random.choice(possible_actions)
     
     
+class LeftMostStrategy:    
+    def initialize_game(self) -> None:
+        pass
     
-def leftmost_strategy(state: ConnectFourGameState) -> ConnectFourAction:
-    """always plays left-most legal action.
-    
-    Args:
-        state: a connect four game state
-        
-    Returns:
-        ConnectFourAction: a legal action for that state randomly selected"""
-    possible_actions = state.get_legal_actions()
-    return possible_actions[0]
+    def select_action(self, state: ConnectFourGameState) -> ConnectFourAction:
+        """always plays left-most legal action.
+
+        Args:
+            state: a connect four game state
+
+        Returns:
+            ConnectFourAction: a legal action for that state randomly selected"""
+        possible_actions = state.get_legal_actions()
+        return possible_actions[0]
 
 
 class RawPVNetStrategy:
-    """evaluates value of each action using a PolicyValueNet
-    and selects the action based on the raw policy for that state (no MCTS)."""
-    def __init__(self, pvn: PolicyValueNet, temperature: float = 1):
-        self.pvn = pvn
-        self.temperature = temperature
+    def __init__(self, evaluator: PolicyValueNet, temperature: float = 1):
+        """evaluates value of each action using a PolicyValueNet
+        and selects the action based on the raw policy for that state (no MCTS).
         
+        Args:
+            evaluator: """
+        self.evaluator = evaluator
+        self.temperature = temperature
+    
+    def initialize_game(self):
+        pass
+    
     def select_action(self, state: ConnectFourGameState) -> ConnectFourAction:
-        """evaluates each action's value (policy) expressed as a probability of being the best action, 
+        """Evaluates each action's value (policy) expressed as a probability of being the best action, 
         then samples one action from that policy distribution.
         """
-        policy, value = self.pvn.infer_from_state(state)
+        policy, value = self.evaluator.infer_from_state(state)
         return choose_action_from_policy(state, policy, self.temperature)
         
         
-# class MctsPvnStrategy:
-#     def __init__(self, pvn: PolicyValueNet):
-#         pass
+class MctsPvnStrategy:
+    def __init__(self, evaluator: PolicyValueNet, 
+                 temperature_schedule: TemperatureSchedule = None,
+                 n_sims: int = 100):
+        """AlphaZero Agent, building a truncated search tree
+        with prioritized exploration thanks to the evaluator.
+        
+        Args:
+            evaluator: the policy-value evaluation model that allows to estimate the 
+                value of each action and future states.
+            temperature_schedule: a schedule defining how greedily the next
+                action should be selected.
+            n_sims: the number of MCTS simulations to run to improve on the raw policy.
+        """
+        
+        if temperature_schedule is None:
+            temperature_schedule = TemperatureSchedule()
+            
+            
+        self.agent = AzAgent(evaluator=evaluator, 
+                             temperature_schedule=temperature_schedule)
+        self.n_sims = n_sims
+        self.agent.initialize_game()
+    
+    def initialize_game(self) -> None:
+        self.agent.initialize_game()
+        
+    def select_action(self, state) -> ConnectFourAction:
+        if state.last_action is not None:
+            self.agent.update(state.last_action)
+        else:
+            self.agent.initialize_game()
+            
+        action, policy = self.agent.select_next_action(self.n_sims)
+        self.agent.update(action)
+        
+        return action
+        
         
         
 def choose_action_from_policy(state: ConnectFourGameState, 

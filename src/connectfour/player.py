@@ -190,7 +190,7 @@ class AzAgent:
     def select_next_action(self, n_sims: int) -> tuple[MctsAction, np.ndarray]:
         """implements sampling from available actions, using MCTS-based policy improvement """
         
-        assert self.current_node.is_terminal_node() == False, f"node is a terminal node: {node.state}"
+        assert self.current_node.is_terminal_node() == False, f"node is a terminal node: {self.current_node.state}"
         
         mcts = TruncatedMCTS(root=self.current_node, 
                              tau=next(self.temperature_schedule), 
