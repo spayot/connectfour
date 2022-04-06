@@ -20,12 +20,13 @@ graph TD
     D -->|provides training data| A
 ```
  This strategy consists in:
-- an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (ResNet) with 2 heads: a policy head with a softmax activation and a state value head with a sigmoid activation.
+- an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (lightweight ResNet with ~350k parameters) with 2 heads: a policy head with a softmax activation and a state value head with a sigmoid activation.
 - a version of Monte-Carlo Tree Search that leverages this evaluator to prioritize the regions of the tree to explore further, and returns an improved policy compared to the original evaluator.  
 - The evaluator is iteratively trained following batches of self-played games. 
-- Training data is gathered by using:
+- Training data is gathered for each state by using:
    - the improved policy output from MCTS for the policy head and
    - the final outcome of the game (-1,0,1) for the value head.
+- Note: duplicate examples of the same state appearing in multiple games are consolidated by averaging the final outcomes and the improved policies.
 
 ## Install
 Setup environment:  
@@ -55,7 +56,13 @@ Agents with various strategies are compared by playing against each other 50 or 
 ![](visualizations/az100_vs_az200.png)
 **Findings**: as expected, the higher the number of simulations, the stronger the Agent. Marginal gains remain important even when going from 200 to 400 simulations.
 
-# Some Very Valuable Readings
+## Example of policy inferences for a given state
+| state and output policy | comments |
+|:-------------------------:|:-------------------------:|
+|<img src="visualizations/policy_example_1.png" alt="policy example" width="150"/>| in this example, the blue player correctly identifies that playing in the first column is absolutely necessary to avoid losing 5 turns later. |   
+|<img src="visualizations/policy_example_2.png" alt="policy example" width="150"/>| similarly, the agent playing as grey identifies here the risk of losing in the next 4 turns if it does not prevent the opponent to form an open-ended 3-in-a-row horizontal line. it also identifies the slighlty higher value of playing column 5 in order to benefit from its position closer to the center.|
+
+## Some Very Valuable Readings
 - [lessons from implementing alphazero](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
 - [MCTS in AlphaGoZero](https://medium.com/@jonathan_hui/monte-carlo-tree-search-mcts-in-alphago-zero-8a403588276a)  
 The former explains some implementation details and offers insights into good hyper-parameters to fine-tune a model for Connect Four:  

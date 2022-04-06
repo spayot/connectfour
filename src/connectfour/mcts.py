@@ -57,7 +57,7 @@ class MctsNode:
         
     
     def __repr__(self) -> str:
-        return f"MctsNode( \n{self.state}\nV={self.V:.4f})"
+        return f"MctsNode( \n{self.state})"
     
     def expand(self, evaluator: PolicyValueNet):
         """"""
