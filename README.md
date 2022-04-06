@@ -59,8 +59,8 @@ Agents with various strategies are compared by playing against each other 50 or 
 ## Example of policy inferences for a given state
 | state and output policy | comments |
 |:-------------------------:|:-------------------------:|
-|<img src="visualizations/policy_example_1.png" alt="policy example" width="150"/>| in this example, the blue player correctly identifies that playing in the first column is absolutely necessary to avoid losing 5 turns later. |   
-|<img src="visualizations/policy_example_2.png" alt="policy example" width="150"/>| similarly, the agent playing as grey identifies here the risk of losing in the next 4 turns if it does not prevent the opponent to form an open-ended 3-in-a-row horizontal line. it also identifies the slighlty higher value of playing column 5 in order to benefit from its position closer to the center.|
+|<img src="visualizations/policy_example_1.png" alt="policy example" width="250"/>| in this example, the blue player correctly identifies that playing in the first column is absolutely necessary to avoid losing 5 turns later. |   
+|<img src="visualizations/policy_example_2.png" alt="policy example" width="250"/>| similarly, the agent playing as grey identifies here the risk of losing in the next 4 turns if it does not prevent the opponent to form an open-ended 3-in-a-row horizontal line. it also identifies the slighlty higher value of playing column 5 in order to benefit from its position closer to the center.|
 
 ## Some Very Valuable Readings
 - [lessons from implementing alphazero](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
