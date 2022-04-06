@@ -14,7 +14,7 @@ Instead of creating a brute-force mimimax strategy (exhaustive tree search + fea
 graph TD
     A(Evaluator) -->|powers MCTS prioritization| B(MCTS)
     A -->|train next gen Evaluator| A
-    B -->C(AlphaZero Agent)
+    B -->|improves policy| C(AlphaZero Agent)
     C -->|self-play| C
     C -->|generate records| D(Game Records)
     D -->|provides training data| A
@@ -22,9 +22,10 @@ graph TD
  This strategy consists in:
 - an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (ResNet) with 2 heads: a policy head with a softmax activation and a state value head with a sigmoid activation.
 - a version of Monte-Carlo Tree Search that leverages this evaluator to prioritize the regions of the tree to explore further, and returns an improved policy compared to the original evaluator.  
-The evaluator is iteratively trained following batches of self-played games. Training data is gathered by using:
-- the improved policy output from MCTS for the policy head and
-- the final outcome of the game (-1,0,1) for the value head.
+- The evaluator is iteratively trained following batches of self-played games. 
+- Training data is gathered by using:
+   - the improved policy output from MCTS for the policy head and
+   - the final outcome of the game (-1,0,1) for the value head.
 
 ## Install
 Setup environment:  
