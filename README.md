@@ -46,12 +46,12 @@ You can play against an agent in the terminal by running the command:
 
 Personally, i haven't been able to beat `gen9` with low temperature and 400 simulations. :)
 
-## Evaluating Competing Strategies
+## Insights from Evaluating Competing Strategies
 Agents with various strategies are compared by playing against each other 50 or 100 games. Results are expressed in terms of % of games won, inference time and the distribution of the number of moves before the game ends.
 ### Raw Evaluator vs AlphaZero (MCTS + Evaluator)
 ![](visualizations/az_20_vs_raw_pvn.svg)
 **Findings**: even a small number of MCTS simulations provide a significant competitive advantage over using the raw evaluator direclty to select the next action.
-### Influence of number of simulations
+### Influence of the number of MCTS simulations
 ![](visualizations/az_20_vs_raw_pvn.svg)
 ![](visualizations/az_100_vs_az_200.svg)
 ![](visualizations/az_200_vs_az_400.svg)
