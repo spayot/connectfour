@@ -49,11 +49,12 @@ Personally, i haven't been able to beat `gen9` with low temperature and 400 simu
 ## Evaluating Competing Strategies
 Agents with various strategies are compared by playing against each other 50 or 100 games. Results are expressed in terms of % of games won, inference time and the distribution of the number of moves before the game ends.
 ### Raw Evaluator vs AlphaZero (MCTS + Evaluator)
-![](visualizations/az_n=20_vs_raw_pvn.png)
+![](visualizations/az_20_vs_raw_pvn.png)
 **Findings**: even a small number of MCTS simulations provide a significant competitive advantage over using the raw evaluator direclty to select the next action.
 ### Influence of number of simulations
-![](visualizations/az20_vs_raw_pvn.png)
-![](visualizations/az100_vs_az200.png)
+![](visualizations/az_20_vs_raw_pvn.svg)
+![](visualizations/az_100_vs_az_200.svg)
+![](visualizations/az_200_vs_az_400.svg)
 **Findings**: as expected, the higher the number of simulations, the stronger the Agent. Marginal gains remain important even when going from 200 to 400 simulations.
 
 ## Example of policy inferences for a given state

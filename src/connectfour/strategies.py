@@ -51,6 +51,12 @@ class RandomStrategy:
         possible_actions = state.get_legal_actions()
         return np.random.choice(possible_actions)
     
+    def __repr__(self) -> str:
+        return "RandomStrategy()"
+    
+    def __str__(self) -> str:
+        return "random"
+    
     
 class LeftMostStrategy:    
     def initialize_game(self) -> None:
@@ -66,6 +72,12 @@ class LeftMostStrategy:
             ConnectFourAction: a legal action for that state randomly selected"""
         possible_actions = state.get_legal_actions()
         return possible_actions[0]
+    
+    def __repr__(self) -> str:
+        return "LeftMostStrategy()"
+    
+    def __str__(self) -> str:
+        return "leftmost"
 
 
 class RawPVNetStrategy:
@@ -87,6 +99,12 @@ class RawPVNetStrategy:
         """
         policy, value = self.evaluator.infer_from_state(state)
         return choose_action_from_policy(state, policy, self.temperature)
+    
+    def __repr__(self) -> str:
+        return f"RawPVNStrategy({self.evaluator.name},temperature={self.temperature})"
+    
+    def __str__(self) -> str:
+        return "raw_pvn"
         
         
 class MctsPvnStrategy:
@@ -112,6 +130,14 @@ class MctsPvnStrategy:
                              temperature_schedule=temperature_schedule)
         self.n_sims = n_sims
         self.agent.initialize_game()
+    
+    
+    def __repr__(self) -> str:
+        return f"MctsPvnStrategy(evaluator={self.agent.evaluator.name}, n_sims={self.n_sims})"
+    
+    def __str__(self) -> str:
+        return f"az_{self.n_sims}"
+        
     
     def initialize_game(self) -> None:
         self.agent.initialize_game()
