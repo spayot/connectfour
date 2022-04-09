@@ -37,3 +37,5 @@ class TemperatureSchedule:
         self.counter += 1
         return value
     
+    def __str__(self) -> str:
+        return f"{self.tau_start}-{self.threshold}-{self.tau_end}".replace(".","")

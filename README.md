@@ -19,6 +19,7 @@ graph TD
     C -->|generate records| D(Game Records)
     D -->|provides training data| A
 ```
+
  This strategy consists in:
 - an evaluator predicting the probabilities for each possible next move to be the best action as well as the overall probability of winning for the next player. This evaluator is essentially based on a classic CNN architecture (lightweight ResNet with ~350k parameters) with 2 heads: a policy head with a softmax activation and a state value head with a sigmoid activation.
 - a version of Monte-Carlo Tree Search that leverages this evaluator to prioritize the regions of the tree to explore further, and returns an improved policy compared to the original evaluator.  
@@ -52,10 +53,16 @@ Agents with various strategies are compared by playing against each other 50 or 
 ![](visualizations/az_20_vs_raw_pvn.svg)
 **Findings**: even a small number of MCTS simulations provide a significant competitive advantage over using the raw evaluator direclty to select the next action.
 ### Influence of the number of MCTS simulations
-![](visualizations/az_20_vs_raw_pvn.svg)
+We successively test agents performing different tree search depth by increasing the number of simulations (20 vs 100, 100 vs 200, 200 vs 400) and report the results below.
+![](visualizations/az_100_vs_az_20.svg)
 ![](visualizations/az_100_vs_az_200.svg)
 ![](visualizations/az_200_vs_az_400.svg)
 **Findings**: as expected, the higher the number of simulations, the stronger the Agent. Marginal gains remain important even when going from 200 to 400 simulations.
+
+### Influence of TemperatureSchedule
+Diversity in moves chosen is good to help the agent learn from a more diverse set of situations, and to make the agent less predictable (boring?) to play against, but this may come at the cost of optimal play. We here make 2 agents compete. One is playing with a greedy temperature of 0.1 across the whole game, another one is on the opposite, keeping a temperature of 1 for the whole game, while the last one adopts a hybrid temperature of more diverse plays (tau=1) for the first 10 moves and more greedy behavior in the latter part of the game (tau=0.1). Results are presented below.
+![](visualizations/az_100_1-0-1_vs_az_100_1-10-01.svg)
+![](visualizations/az_100_01-0-01_vs_az_100_1-10-01.svg)
 
 ## Example of policy inferences for a given state
 | state and output policy | comments |

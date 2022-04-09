@@ -133,10 +133,10 @@ class MctsPvnStrategy:
     
     
     def __repr__(self) -> str:
-        return f"MctsPvnStrategy(evaluator={self.agent.evaluator.name}, n_sims={self.n_sims})"
+        return f"MctsPvnStrategy(evaluator={self.agent.evaluator.name}, n_sims={self.n_sims}, tau={str(self.agent.temperature_schedule)})"
     
     def __str__(self) -> str:
-        return f"az_{self.n_sims}"
+        return f"az_{self.n_sims}_{str(self.agent.temperature_schedule)}"
         
     
     def initialize_game(self) -> None:
