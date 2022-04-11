@@ -151,7 +151,7 @@ class GameRunner:
 
         self.mcts_policy = None
     
-    def update(self, action: c4.game.Action):
+    def update(self, action: c4.game.ConnectFourAction):
         """updates game state and Agent representation of the game"""
         # update state    
         self.current_state = self.current_state.move(action)
