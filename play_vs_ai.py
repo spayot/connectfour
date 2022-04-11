@@ -8,21 +8,38 @@ TO DO:
 - replace with strategies and compete approach
 """
 import argparse
-import time
 import os
+from typing import TypedDict
+
 import connectfour as c4
 
+def _parse_args():
+    """returns the parsed CLI arguments"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--modelpath",
+                        default='models/gen9.h5',
+                        help="the path to the policy-value estimator to power AlphaZero",
+                        type=str)
+    parser.add_argument("-t", "--temperature", 
+                        default=1, 
+                        nargs='?', 
+                        type=float, 
+                        help="the higher the temperature, the more greedily the agent selects the most promising moves.")
+    
+    parser.add_argument("-n", "--n_simulations", 
+                        default=100, 
+                        type=int, 
+                        help="the number of MCTS simulations to improve the raw evaluator's policy")
 
-def display_state(state: c4.game.ConnectFourGameState) -> None:
-    """defines how each game state should be displayed in the terminal.
+    return parser.parse_args()
     
-    Args:
-        node: the MctsNode associated with that game state."""
-    os.system('clear')
-    print(state)
+
+class ValidUserInputFeedback(TypedDict):
+    type: str
+    message: str
+
     
-    
-def assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> dict:
+def _assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> ValidUserInputFeedback:
     """returns a dictionary with feedback on whether the input
     was valid or not. type: (VALID, INVALID, EXIT).
     if it is invalid, it also includes a feedback message"""
@@ -48,116 +65,145 @@ def assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> di
     return {'type': 'VALID', 'message': None}
     
     
-def get_user_input(state: c4.game.ConnectFourGameState) -> int:
-    """allows to collect user input for the next move and verify the move is valid.
-    allows user to enter a different value if the original input is invalid."""
     
-    msg = """your turn! what column do you want to play in [0-6]? type X to exit:  """
-    user_input = input(msg)
-    is_input_valid = assess_user_move(user_input, state)
-    
-    while is_input_valid['type'] == 'INVALID':
-        # ask for new input with appropriate feedback message
-        user_input = input(is_input_valid['message'])
-        
-        # revalidate the output
-        is_input_valid = assess_user_move(user_input, state)
-    
-    return int(user_input)        
-    
-
-    
-def play_game(model_path: str, temperature: float, n_sims: int) -> None:
-    """interface to play a game against an AlphaZero-like agent.
+class ConnectFourUI:
+    """defines how the game logic (GameRunner) interacts with the user.
     
     Args:
-        model_path: allows to select which generation to play against
-        temperature: the temperature defining how greedy the AI agent will be
-        n_sims: the number of MCTS simulations the agent will perform to
-            improve on its raw evaluator policy.
-            
-    Returns:
-        None"""
+        runner: GameRunner"""
+    def __init__(self, runner):
+        self.runner = runner
     
-    # instantiate evaluator
-    evaluator = c4.pvnet.PolicyValueNet.from_file(filename=model_path)
-    print('evaluator:', evaluator.name)
-    
-    # instantiate the AlphaZero agent
-    temperature_schedule = c4.temperature.TemperatureSchedule(temperature,0,temperature)
-    
-    agent = c4.player.AzAgent(evaluator=evaluator, 
-                              temperature_schedule=c4.temperature.TemperatureSchedule(temperature,10,temperature))
-    
-    # initialize the game
-    current_state = c4.game.ConnectFourGameState()
-    agent.initialize_game() # initialize internal representation
-    
-    turns = 0 # a counter of the number of moves so far
-    
-    while not current_state.is_game_over:
+    def display_agent(self) -> None:
+        print('you will play against agent:', self.runner.agent)
         
-        # render current state
-        display_state(current_state)
         
-        # display calculated policy when it follows AZ's turn
-        if turns % 2 == 0 and turns > 0:
-            print('raw evaluator:', evaluator_policy.round(2), f'\texpected value: {value:.3f}')
-            print('with mcts:    ', mcts_policy.round(2))
+    def display_state(self) -> None:
+        """defines how each game state should be displayed in the terminal.
+    
+        Args:
+            runner: a GameRunner instance"""
+        os.system('clear')
+        print(self.runner.current_state)
+        if self.runner.turns % 2 == 0 and self.runner.turns > 0:
+            print('with mcts:    ', self.runner.mcts_policy.round(2))
         
-        # switch player turn
-        next_player = current_state.next_player
         
-        # human player turn
-        if next_player == c4.game.Player.x:
+    def get_user_input(self) -> int:
+        """allows to collect user input for the next move and verify the move is valid.
+        allows user to enter a different value if the original input is invalid."""
+
+        msg = """your turn! what column do you want to play in [0-6]? type X to exit:  """
+        user_input = input(msg)
+        is_input_valid = _assess_user_move(user_input, self.runner.current_state)
+
+        while is_input_valid['type'] == 'INVALID':
+            # ask for new input with appropriate feedback message
+            user_input = input(is_input_valid['message'])
+
+            # revalidate the output
+            is_input_valid = _assess_user_move(user_input, self.runner.current_state)
+
+        return int(user_input) 
+    
+    
+    def display_final_message(self) -> None:
+        self.display_state()
+        final_message = {
+            c4.game.Player.x.value: f"congrats! you won in {self.runner.turns} turns!",
+            c4.game.Player.o.value: f"good try! but you lost in {self.runner.turns} turns... game over",
+            0: 'what a draw! good game.'
+        }
+        print(final_message[self.runner.result]) 
             
-            # get user chosen action
-            col = get_user_input(current_state)
-            
-            action = c4.game.ConnectFourAction(x_coordinate=col, player=next_player)
-            
-        else:
-            action, mcts_policy = agent.select_next_action(n_sims)
-            evaluator_policy, value = evaluator.infer_from_state(current_state) # needed for display
-            
+    
+        
+class GameRunner:
+    def __init__(self, model_path: str, temperature: float, n_sims: int) -> None:
+        """interface to play a game against an AlphaZero-like agent.
+
+        Args:
+            model_path: allows to select which generation to play against
+            temperature: the temperature defining how greedy the AI agent will be
+            n_sims: the number of MCTS simulations the agent will perform to
+                improve on its raw evaluator policy.
+
+        Returns:
+            None"""
+
+        # instantiate evaluator
+        evaluator = c4.pvnet.PolicyValueNet.from_file(filename=model_path)
+
+        # instantiate the AlphaZero agent
+        temperature_schedule = c4.temperature.TemperatureSchedule(temperature,0,temperature)
+        
+        self.agent = c4.player.AzAgent(evaluator=evaluator, 
+                                       temperature_schedule=temperature_schedule)
+        
+        self.n_sims = n_sims
+    
+    def initialize_game(self):
+        # initialize the game
+        self.current_state = c4.game.ConnectFourGameState()
+        self.agent.initialize_game() # initialize internal representation
+
+        self.turns: int = 0 # a counter of the number of moves so far
+
+        self.mcts_policy = None
+    
+    def update(self, action):
+        """updates game state and Agent representation of the game"""
         # update state    
-        current_state = current_state.move(action)
-        agent.update(action)    
-            
-        turns += 1
-    
-    # 
-    display_state(current_state)
-    # assess result of the game
-    result = current_state.game_result
-    
-    final_message = {
-        c4.game.Player.x.value: f"congrats! you won in {turns} turns!",
-        c4.game.Player.o.value: f"good try! but you lost in {turns} turns... game over",
-        0: 'what a draw! good game.'
-    }
-    
-    print(final_message[result])
+        self.current_state = self.current_state.move(action)
+        self.agent.update(action)    
+        self.turns += 1
         
+    def play_vs_ai(self, ui: ConnectFourUI):
+        """runs a full ConnectFourGame where AzAgent is playing against user.
+        
+        Args:
+            ui: the ConnectFourUI that defines the implementation of anything UI
+            related."""
+        ui.display_agent()
+        self.initialize_game()
+        
+        while not self.current_state.is_game_over:
+
+            # render current state
+            ui.display_state()
+            
+            # switch player turn
+            next_player = self.current_state.next_player
+
+            # human player turn
+            if next_player == c4.game.Player.x:
+
+                # get user chosen action
+                col = ui.get_user_input()
+
+                action = c4.game.ConnectFourAction(x_coordinate=col, player=next_player)
+
+            else:
+                action, self.mcts_policy = self.agent.select_next_action(self.n_sims)
+
+
+            self.update(action)
+
+        # assess result of the game
+        self.result = self.current_state.game_result
+        ui.display_final_message()
+            
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--modelpath",
-                        default='models/gen9.h5',
-                        help="the path to the policy-value estimator to power AlphaZero",
-                        type=str)
-    parser.add_argument("-t", "--temperature", 
-                        default=1, 
-                        nargs='?', 
-                        type=float, 
-                        help="the higher the temperature, the more greedily the agent selects the most promising moves.")
+    args = _parse_args()
+    print(args)
+    runner = GameRunner(model_path=args.modelpath, 
+                        temperature=args.temperature, 
+                        n_sims=args.n_simulations)
     
-    parser.add_argument("-n", "--n_simulations", 
-                        default=100, 
-                        type=int, 
-                        help="the number of MCTS simulations to improve the raw evaluator's policy")
-
-    args = parser.parse_args()
+    # define UI
+    ui = ConnectFourUI(runner)
     
-    play_game(model_path=args.modelpath, temperature=args.temperature, n_sims=args.n_simulations)
+    # run game
+    runner.play_vs_ai(ui)
     

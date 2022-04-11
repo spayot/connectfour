@@ -24,6 +24,83 @@ from .record import GameRecord
 from .temperature import TemperatureSchedule
 
 
+class AzAgent:
+    def __init__(self,
+                 evaluator: PolicyValueNet,
+                 game_config: ConnectFourGameConfig = None,
+                 temperature_schedule: TemperatureSchedule = None,
+                 c_puct: float = 4.):
+        
+        if game_config is None:
+            game_config=ConnectFourGameConfig()
+            
+        if temperature_schedule is None:
+            temperature_schedule = TemperatureSchedule()
+            
+
+        self.evaluator = evaluator
+        self.game_config = game_config
+        self.temperature_schedule = temperature_schedule
+        self.c_puct = c_puct
+        self.memory: list[GameRecord] = []
+        
+        assert (evaluator.n, evaluator.m) == game_config.shape, """evaluator is not adapted to the game_config."""
+        
+    def initialize_game(self, next_player: Player = Player.x) -> None:
+        """initialize current_node to the beginning of a game"""
+        initial_state = ConnectFourGameState(next_player=next_player, game_config=self.game_config)
+        self.current_node = MctsNode(state=initial_state, c_puct=self.c_puct)
+        
+
+    def select_next_action(self, n_sims: int) -> tuple[MctsAction, np.ndarray]:
+        """implements sampling from available actions, using MCTS-based policy improvement """
+        
+        assert self.current_node.is_terminal_node() == False, f"node is a terminal node: {self.current_node.state}"
+        
+        mcts = TruncatedMCTS(root=self.current_node, 
+                             tau=next(self.temperature_schedule), 
+                             evaluator=self.evaluator)
+        
+        # get mcts-improved policy, and updates tree Q, N, ...
+        actions, policy = mcts.policy_improvement(n_sims)
+        
+        
+        # transform policy into format similar to evaluator output (np.ndarray)
+        Pi = np.zeros(self.game_config.shape[1])
+        Pi[[action.move.x_coordinate for action in actions]] = policy
+        
+        # returns the index of the 
+        xk = np.arange(len(actions))
+        
+        try: 
+            action_chooser = stats.rv_discrete(name='policy_sampler', values=(xk, policy))
+        except ValueError:
+            print(f"policy is not summing to 1:\n {policy}")
+            raise
+        
+        # sample from the distribution
+        chosen_action = actions[action_chooser.rvs()]
+        
+        return chosen_action.move, Pi
+    
+    def update(self, action: ConnectFourAction) -> None:
+        """update the current node based on which action was played
+        by the opponent.
+        
+        Args:
+            action: the action played by the opponent"""
+        
+        # find MctsAction corresponding to input action
+        if not self.current_node.is_expanded:
+            self.current_node.expand(self.evaluator)
+        mcts_action = [a for a in self.current_node.actions if a.move == action]
+        assert len(mcts_action) == 1, f"{action} does not match any child Mcts Actions for node {self.current_node}"
+        
+        mcts_action = mcts_action[0] # one and only one action should match
+        
+        self.current_node = mcts_action.take_action(prune=True)
+        
+
 
 
 class AzPlayer:
@@ -150,90 +227,12 @@ class AzPlayer:
     # def __repr__(self) -> str:
     #     return self.__class__.__name__ + f"(evaluator={self.evaluator})"
         
-"""
-play game:
-- start_game
-- play_single_turn
-- record_opponent_turn
-"""
 
 
 
 
-class AzAgent:
-    def __init__(self,
-                 evaluator: PolicyValueNet,
-                 game_config: ConnectFourGameConfig = None,
-                 temperature_schedule: TemperatureSchedule = None,
-                 c_puct: float = 4.):
-        
-        if game_config is None:
-            game_config=ConnectFourGameConfig()
-            
-        if temperature_schedule is None:
-            temperature_schedule = TemperatureSchedule()
-            
-        self.game_config = game_config
-        self.evaluator = evaluator
-        self.temperature_schedule = temperature_schedule
-        self.c_puct = c_puct
-        self.memory: list[GameRecord] = []
-        
-        assert (evaluator.n, evaluator.m) == game_config.shape, """evaluator is not adapted to the game_config."""
-        
-    def initialize_game(self, next_player: Player = Player.x) -> None:
-        """initialize current_node to the beginning of a game"""
-        initial_state = ConnectFourGameState(next_player=next_player, game_config=self.game_config)
-        self.current_node = MctsNode(state=initial_state, c_puct=self.c_puct)
-        
 
-    def select_next_action(self, n_sims: int) -> tuple[MctsAction, np.ndarray]:
-        """implements sampling from available actions, using MCTS-based policy improvement """
-        
-        assert self.current_node.is_terminal_node() == False, f"node is a terminal node: {self.current_node.state}"
-        
-        mcts = TruncatedMCTS(root=self.current_node, 
-                             tau=next(self.temperature_schedule), 
-                             evaluator=self.evaluator)
-        
-        # get mcts-improved policy, and updates tree Q, N, ...
-        actions, policy = mcts.policy_improvement(n_sims)
-        
-        
-        # transform policy into format similar to evaluator output (np.ndarray)
-        Pi = np.zeros(self.game_config.shape[1])
-        Pi[[action.move.x_coordinate for action in actions]] = policy
-        
-        # returns the index of the 
-        xk = np.arange(len(actions))
-        
-        try: 
-            action_chooser = stats.rv_discrete(name='policy_sampler', values=(xk, policy))
-        except ValueError:
-            print(f"policy is not summing to 1:\n {policy}")
-            raise
-        
-        # sample from the distribution
-        chosen_action = actions[action_chooser.rvs()]
-        
-        return chosen_action.move, Pi
-    
-    def update(self, action: ConnectFourAction) -> None:
-        """update the current node based on which action was played
-        by the opponent.
-        
-        Args:
-            action: the action played by the opponent"""
-        
-        # find MctsAction corresponding to input action
-        if not self.current_node.is_expanded:
-            self.current_node.expand(self.evaluator)
-        mcts_action = [a for a in self.current_node.actions if a.move == action]
-        assert len(mcts_action) == 1, f"{action} does not match any child Mcts Actions for node {self.current_node}"
-        
-        mcts_action = mcts_action[0] # one and only one action should match
-        
-        self.current_node = mcts_action.take_action(prune=True)
+
         
         
         
