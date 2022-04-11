@@ -2,10 +2,8 @@
 """
 Allows a human player to play against an AlphaZero Agent in the terminal.
 
-% python3 play_vs_ai.py --temperature 1 --n_sims 100 --model_path "models/gen9.h5"
+% python3 play_vs_ai.py --temperature 1 --n_simulations 100 --modelpath "models/gen9.h5"
 
-TO DO:
-- replace with strategies and compete approach
 """
 import argparse
 import os
@@ -67,18 +65,20 @@ def _assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> V
     
     
 class ConnectFourUI:
-    """defines how the game logic (GameRunner) interacts with the user.
+    """User Interface allowing the game logic to interact with the user,
+    both in terms of getting inputs (row to play)
     
     Args:
         runner: GameRunner"""
     def __init__(self, runner):
         self.runner = runner
     
-    def display_agent(self) -> None:
+    def display_introduction(self) -> None:
+        print("welcome to ConnectFour vs AlphaZero!")
         print('you will play against agent:', self.runner.agent)
         
         
-    def display_state(self) -> None:
+    def display_current_state(self) -> None:
         """defines how each game state should be displayed in the terminal.
     
         Args:
@@ -108,7 +108,7 @@ class ConnectFourUI:
     
     
     def display_final_message(self) -> None:
-        self.display_state()
+        self.display_current_state()
         final_message = {
             c4.game.Player.x.value: f"congrats! you won in {self.runner.turns} turns!",
             c4.game.Player.o.value: f"good try! but you lost in {self.runner.turns} turns... game over",
@@ -143,7 +143,7 @@ class GameRunner:
         self.n_sims = n_sims
     
     def initialize_game(self):
-        # initialize the game
+        """initialize a new game (both state and agent representation)"""
         self.current_state = c4.game.ConnectFourGameState()
         self.agent.initialize_game() # initialize internal representation
 
@@ -151,7 +151,7 @@ class GameRunner:
 
         self.mcts_policy = None
     
-    def update(self, action):
+    def update(self, action: c4.game.Action):
         """updates game state and Agent representation of the game"""
         # update state    
         self.current_state = self.current_state.move(action)
@@ -165,12 +165,14 @@ class GameRunner:
             ui: the ConnectFourUI that defines the implementation of anything UI
             related."""
         ui.display_agent()
+        
+        
         self.initialize_game()
         
         while not self.current_state.is_game_over:
 
             # render current state
-            ui.display_state()
+            ui.display_current_state()
             
             # switch player turn
             next_player = self.current_state.next_player
@@ -196,7 +198,6 @@ class GameRunner:
 
 if __name__ == '__main__':
     args = _parse_args()
-    print(args)
     runner = GameRunner(model_path=args.modelpath, 
                         temperature=args.temperature, 
                         n_sims=args.n_simulations)
