@@ -164,7 +164,7 @@ class GameRunner:
         Args:
             ui: the ConnectFourUI that defines the implementation of anything UI
             related."""
-        ui.display_agent()
+        ui.display_introduction()
         
         
         self.initialize_game()
