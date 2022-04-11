@@ -37,7 +37,7 @@ class ValidUserInputFeedback(TypedDict):
     message: str
 
     
-def _assess_user_move(user_input: str, state: c4.game.ConnectFourGameState) -> ValidUserInputFeedback:
+def _assess_user_input(user_input: str, state: c4.game.ConnectFourGameState) -> ValidUserInputFeedback:
     """returns a dictionary with feedback on whether the input
     was valid or not. type: (VALID, INVALID, EXIT).
     if it is invalid, it also includes a feedback message"""
@@ -95,14 +95,14 @@ class ConnectFourUI:
 
         msg = """your turn! what column do you want to play in [0-6]? type X to exit:  """
         user_input = input(msg)
-        is_input_valid = _assess_user_move(user_input, self.runner.current_state)
+        is_input_valid = _assess_user_input(user_input, self.runner.current_state)
 
         while is_input_valid['type'] == 'INVALID':
             # ask for new input with appropriate feedback message
             user_input = input(is_input_valid['message'])
 
             # revalidate the output
-            is_input_valid = _assess_user_move(user_input, self.runner.current_state)
+            is_input_valid = _assess_user_input(user_input, self.runner.current_state)
 
         return int(user_input) 
     
