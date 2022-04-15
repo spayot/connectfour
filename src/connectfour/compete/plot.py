@@ -49,10 +49,9 @@ def subplot_results(records: pd.DataFrame, ax: plt.Axes):
                        size=10, xytext=(0, 8),
                        textcoords='offset points')
         
-    ax.set_xlim([0,1])
-    ax.set_xticks([0], [''])
-    ax.set_yticks([])
-    ax.set_xlabel('winner')
+    ax.set(xlim=[0,1], xticks=[0], xticklabels=[''], 
+           xlabel='winner', yticks=[])
+           
     ax.legend([])
     ax.invert_yaxis()
     
@@ -71,8 +70,7 @@ def subplot_durations(records: pd.DataFrame, ax: plt.Axes):
                 saturation = 1,
                 ax=ax)
     
-    ax.set_xlim([1e-2,10])
-    ax.set_xscale('log')
+    ax.set(xlim=[1e-2,10], xscale='log')
     ax.set_yticklabels(ax.get_yticklabels(),rotation = 90)
 
     
