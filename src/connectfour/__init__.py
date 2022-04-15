@@ -14,4 +14,5 @@ Author: Sylvain Payot
 E-mail: sylvain.payot@gmail.com
 """
 
-from . import compete, config, game, logging, mcts, player, pvnet, render, selfplay, strategies, temperature, train, viz
+from . import compete, human_vs_ai
+from . import config, game, logging, mcts, player, pvnet, render, selfplay, strategies, temperature, train, viz
