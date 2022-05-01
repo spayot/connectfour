@@ -12,7 +12,7 @@ pvn_config = {'block_size': 1,
               'l2_const': 1e-4,
              }
 
-training_config = {}
+training_config : dict = {}
 
 
 mcts_config = {'C_PUCT': 4,
@@ -33,7 +33,7 @@ class ConnectFourGameConfig:
 def load_from_yaml(fpath=str) -> dict:
     """loads game config from a yaml file"""
     with open(fpath, 'r') as f:
-        config = yaml.safe_load(f)
+        config : dict = yaml.safe_load(f)
         
     return config
     

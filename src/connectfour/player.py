@@ -15,11 +15,10 @@ import pickle
 import numpy as np
 from scipy import stats
 
-from .config import ConnectFourGameConfig
-from .game import ConnectFourGameState, ConnectFourAction, Player
+from .config import ConnectFourGameConfig, board_config, selfplay_config
+from .game import ConnectFourAction, ConnectFourGameState, Player
+from .mcts import MctsAction, MctsNode, TruncatedMCTS
 from .pvnet import PolicyValueNet
-from .mcts import MctsNode, MctsAction, TruncatedMCTS
-from .config import board_config, selfplay_config
 from .record import GameRecord
 from .temperature import TemperatureSchedule
 
@@ -52,7 +51,7 @@ class AzAgent:
         self.current_node = MctsNode(state=initial_state, c_puct=self.c_puct)
         
 
-    def select_next_action(self, n_sims: int) -> tuple[MctsAction, np.ndarray]:
+    def select_next_action(self, n_sims: int) -> tuple[ConnectFourAction, np.ndarray]:
         """implements sampling from available actions, using MCTS-based policy improvement """
         
         assert self.current_node.is_terminal_node() == False, f"node is a terminal node: {self.current_node.state}"

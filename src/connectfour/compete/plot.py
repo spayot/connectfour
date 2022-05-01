@@ -6,7 +6,7 @@ import seaborn as sns
 
 COLOR_PALETTE = 'coolwarm'
 
-def _get_durations(records: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _get_durations(records: pd.DataFrame) -> pd.DataFrame:
     """transforms records dataframe into format necessary for 
     `compete.plot_strat_competition_outcomes`
     

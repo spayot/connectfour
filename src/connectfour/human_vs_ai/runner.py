@@ -3,9 +3,14 @@ defines the GameRunner class that handles the game logic for a human vs Player g
 
 """
 
-from . import cli
+from typing import Optional
+
+import numpy as np
+
 from .. import game, player, pvnet
 from .. import temperature as temp
+from . import cli
+
 
 class GameRunner:
     def __init__(self, model_path: str, temperature: float, n_sims: int) -> None:
@@ -43,7 +48,7 @@ class GameRunner:
 
         self.turns: int = 0 # a counter of the number of moves so far
 
-        self.mcts_policy = None
+        self.mcts_policy: Optional[np.ndarray] = None
     
     def update(self, action: game.ConnectFourAction) -> None:
         """updates game state and Agent representation of the game.

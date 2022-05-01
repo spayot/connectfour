@@ -17,8 +17,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 
-from .pvnet import crossentropy_loss, PolicyValueNet
-
+from .pvnet import PolicyValueNet, crossentropy_loss
 
 __author__ = "Sylvain Payot"
 __copyright__ = "Sylvain Payot"

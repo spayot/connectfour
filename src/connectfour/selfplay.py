@@ -3,16 +3,16 @@
 Self Play
 """
 
-import os
 import datetime
+import os
 import time
-from tqdm.notebook import tqdm
 
 import numpy as np
+from tqdm.notebook import tqdm
 
-from .pvnet import PolicyValueNet
-from .player import AzPlayer, TemperatureSchedule
 from .config import mcts_config, selfplay_config
+from .player import AzPlayer, TemperatureSchedule
+from .pvnet import PolicyValueNet
 
 
 class SelfPlayConfig(object):

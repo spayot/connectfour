@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+
 @dataclass
 class TemperatureSchedule:
     """defines the evolution of temperature parameter tau at each round of the game

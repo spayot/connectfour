@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 import json
 import os
-
+from dataclasses import dataclass
 
 import pandas as pd
+
 
 class GameLogger:
     def __init__(self, logfile: str = 'logs/compete/compete.log'):

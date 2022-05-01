@@ -19,7 +19,7 @@ import os
 
 import numpy as np
 
-from .game import ConnectFourGameState, ConnectFourAction
+from .game import ConnectFourAction, ConnectFourGameState
 from .pvnet import PolicyValueNet
 
 __author__ = "Sylvain Payot"

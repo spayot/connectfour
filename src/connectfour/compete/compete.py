@@ -19,16 +19,15 @@ import json
 import os
 import sys
 import time
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
-from connectfour.game import ConnectFourGameState, Player
 from connectfour.config import ConnectFourGameConfig
-from connectfour.strategies import ChooseActionStrategy
+from connectfour.game import ConnectFourGameState, Player
 from connectfour.logging import GameLogger
-
+from connectfour.strategies import ChooseActionStrategy
 
 TIME_RECORD_FORMAT = '%Y-%m-%d %H:%M:%S'
 DURATION_PRECISION: int = 6
@@ -38,19 +37,20 @@ class GameTimer:
     """a class to time each move during a game, 
     and """
     def __init__(self):
-        self.last_move = time.time()
+        self.last_move = time.perf_counter()
         self.moves_duration = []
     
-    def record_move(self):
+    def record_move(self) -> None:
         """records time taken to perform a move."""
-        new_time = time.time()
+        new_time = time.perf_counter()
         self.moves_duration.append(new_time - self.last_move)
         self.last_move = new_time
     
-    def get_avg_moves_duration(self):
+    def get_avg_moves_duration(self) -> tuple[float, float]:
         """return avg move time for each player, so far in the game."""
         x_moves_avg_duration = np.mean(self.moves_duration[::2]).round(DURATION_PRECISION)
         o_moves_avg_duration = np.mean(self.moves_duration[1::2]).round(DURATION_PRECISION)
+        
         return x_moves_avg_duration, o_moves_avg_duration
     
     def get_current_time(self) -> str:
@@ -101,7 +101,7 @@ def play_h2h_game(x_strategy: ChooseActionStrategy,
         'game_length': game_length, 
         'avg_move_1': round(avg_move_1, 4),
         'avg_move_2': round(avg_move_2, 4),
-        'winner': result_to_winner_map[state.game_result],
+        'winner': result_to_winner_map[state.game_result],  # type: ignore
            }
     
 
@@ -111,7 +111,7 @@ def play_multi_h2h_games(strat1: ChooseActionStrategy,
                          config: ConnectFourGameConfig = None,
                          logpath: str = None) -> pd.DataFrame:
     """Allows 2 strategies to play against each other for `n_games` games.
-    For fairness, every game, the starting strategy alternates.
+    For fairness, the strategy starting alternates at every game.
     Returns statistics about game outcomes and game length."""
     if config is None:
         config = ConnectFourGameConfig()
@@ -143,9 +143,9 @@ def tournament(strategies: dict[str, ChooseActionStrategy],
     results = []
     for strat1, strat2 in itertools.combinations(strategies.keys(), 2):
         print(strat1, 'vs', strat2)
-        outcomes = compare_strategies(strat1=strategies[strat1],
-                                      strat2=strategies[strat2], 
-                                      n_games=n_games)
+        outcomes = play_multi_h2h_games(strat1=strategies[strat1],
+                                        strat2=strategies[strat2], 
+                                        n_games=n_games)
         strat1wins = (outcomes.result > 0).mean()
         strat2wins = (outcomes.result < 0).mean()
         print(strat1, f"wins {strat1wins:.1%} of the time\n")

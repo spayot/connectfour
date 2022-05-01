@@ -15,9 +15,11 @@ also be used as template for Python modules.
 Note: This skeleton file can be safely removed if not needed!
 """
 
+from typing import Optional
+
 import numpy as np
 
-from .game import ConnectFourGameState, ConnectFourAction, Player
+from .game import ConnectFourAction, ConnectFourGameState, Player
 from .pvnet import PolicyValueNet
 
 __author__ = "Sylvain Payot"
@@ -50,9 +52,9 @@ class MctsNode:
         self.parent = parent # MctsAction
         self.c_puct = c_puct
         
-        self.is_expanded = False
-        self.V: float = None # estimated value of being in that state
-        self.actions: list[MctsAction] = None
+        self.is_expanded: bool = False
+        self.V: Optional[float] = None # estimated value of being in that state
+        self.actions: Optional[list[MctsAction]] = None
         
         
     
@@ -126,7 +128,7 @@ class MctsAction:
                  state: ConnectFourGameState, 
                  move: ConnectFourAction, 
                  prior: float, 
-                 parent=None):
+                 parent: Optional[MctsNode] = None):
         self.state = state
         self.move = move 
         self.parent = parent # MctsNode
@@ -134,7 +136,7 @@ class MctsAction:
         self.N: int = 0 # number of times this action was selected during the Selection process
         self.W: float = 0. # sum of values of all expanded child nodes
         self.P: float = prior # action's value based on the original estimator
-        self.child = None # 
+        self.child: Optional[MctsNode] = None # 
         
     def __repr__(self):
         return f"MCTS Action(move={self.move}, prior={self.P}, q={self.Q})"
@@ -161,7 +163,7 @@ class MctsAction:
             self.child = MctsNode(new_state, parent=self)
         
         if prune:
-            self.child.parent = None
+            self.child.parent = None # type: ignore
         
         return self.child
         
@@ -200,15 +202,12 @@ class TruncatedMCTS(object):
     def policy_improvement(self, simulations_number: int) -> tuple[list[MctsAction], np.ndarray]:
         """
 
-        Parameters
-        ----------
-        simulations_number : int
-            number of simulations performed to get the best action
+        Args:
+            simulations_number: number of simulations performed to get the best action
 
-        Returns
-        -------
-        - list: actions
-        - np.ndarray: improved policy, based on MCTS results
+        Returns:
+            list: actions
+            np.ndarray: improved policy, based on MCTS results
 
         """
         # run n simulations
@@ -216,11 +215,13 @@ class TruncatedMCTS(object):
             # walk the state tree graph until running into an unexplored node (selection and tree expansion)
             node = self._tree_policy()
             # back propagate the node value
-            node.backpropagate(node.V)
+            node.backpropagate(node.V) # type: ignore
 
         # improved policy is proportional to the number of times each action
         # was selected during the simulations
-        Ns = np.array([mcts_action.N for mcts_action in self.root.actions])
+        assert self.root.actions is not None, "the root node has not been expanded"
+        
+        Ns = np.array([mcts_action.N for mcts_action in self.root.actions]) 
         
         # apply temperature factor
         Ns = np.power(Ns, (1 / self.tau))

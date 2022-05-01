@@ -20,9 +20,9 @@ import numpy as np
 
 from .game import ConnectFourGameState
 from .mcts import MctsNode
-from .selfplay import SelfPlayConfig
 from .player import AzPlayer, TemperatureSchedule
 from .pvnet import PolicyValueNet
+from .selfplay import SelfPlayConfig
 
 
 def renderConnectFour(state: ConnectFourGameState, ax=None):

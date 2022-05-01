@@ -17,11 +17,11 @@ from typing import Protocol
 import numpy as np
 from scipy import stats
 
-from .game import ConnectFourGameState, ConnectFourAction, Player
 from .config import ConnectFourGameConfig
+from .game import ConnectFourAction, ConnectFourGameState, Player
+from .player import AzAgent
 from .pvnet import PolicyValueNet
 from .temperature import TemperatureSchedule
-from .player import AzAgent
 
 
 class ChooseActionStrategy(Protocol):

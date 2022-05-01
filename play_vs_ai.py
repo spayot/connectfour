@@ -10,8 +10,8 @@ Example:
 """
 import argparse
 
-
 import connectfour as c4
+
 
 def _parse_args():
     """returns the parsed CLI arguments"""

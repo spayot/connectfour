@@ -5,7 +5,6 @@ for the distribution of game length.
 """
 
 import os
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +12,7 @@ import pandas as pd
 import seaborn as sns
 
 
-def cdf(array: np.ndarray) -> (np.ndarray, np.ndarray):
+def cdf(array: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """returns x and y vectors to plot the cumulated density function
     of an input array
     Args:
@@ -33,7 +32,7 @@ def _plot_self_play_cdf(df: pd.DataFrame, ax):
     ax.plot(x,y, label=f"{df.evaluator_name[0]}_{df.n_sims[0]}_{df.tau[0]}")
 
 
-def get_logs(config_list: List[str]= [], logpath: str= 'logs/') -> List[pd.DataFrame]:
+def get_logs(config_list: list[str]= [], logpath: str= 'logs/') -> list[pd.DataFrame]:
     """returns a list of dataframes with log data"""
     if not config_list:
         # if no config list, plot cdf for all the log files in logpath
@@ -43,7 +42,7 @@ def get_logs(config_list: List[str]= [], logpath: str= 'logs/') -> List[pd.DataF
         dfs.append(pd.read_csv(os.path.join(logpath, config + ".log")))
     return dfs
     
-def plot_log_cdfs(config_list: List[str]= [], logpath: str= 'logs/', ax=None) -> None:
+def plot_log_cdfs(config_list: list[str]= [], logpath: str= 'logs/', ax=None) -> None:
     """plots game length CDFs for all configs listed in config_list"""
     dfs = get_logs(config_list, logpath)
     

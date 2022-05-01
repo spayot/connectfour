@@ -1,11 +1,12 @@
 import os
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 from .. import game
 
+
 class ValidUserInputFeedback(TypedDict):
     type: str
-    message: str
+    message: Optional[str]
 
     
 def _assess_user_input(user_input: str, state: game.ConnectFourGameState) -> ValidUserInputFeedback:
